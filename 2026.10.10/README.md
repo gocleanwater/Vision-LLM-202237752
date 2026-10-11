@@ -29,10 +29,8 @@ python -m pip install numpy
 python "[Student] 01_Linux-and-Python_Assignment.py"
 ```
 
-
 ## 참고 사항
 
 - 파일명에 공백과 대괄호가 포함되어 있으므로 실행할 때 파일명을 따옴표로 묶어야 합니다.
 - 실행 결과는 터미널에 출력됩니다.
-- 실행 과정에서 현재 폴더에 `맹구_개인정보.json`과 `맹구_개인정보.yaml` 파일이 생성됩니다.
 - 한글 입출력을 위해 UTF-8 환경에서 실행하는 것을 권장합니다.
