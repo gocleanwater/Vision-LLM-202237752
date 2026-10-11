@@ -12,14 +12,13 @@
 
 - Python 3
 - NumPy
-- PyYAML
 
 ## 의존성 설치
 
 터미널에서 다음 명령어를 실행합니다.
 
 ```bash
-python -m pip install numpy pyyaml
+python -m pip install numpy
 ```
 
 ## 실행 방법
@@ -30,11 +29,6 @@ python -m pip install numpy pyyaml
 python "[Student] 01_Linux-and-Python_Assignment.py"
 ```
 
-프로그램 실행 중 숫자 입력을 요청하면 여러 정수를 공백으로 구분하여 입력합니다.
-
-```text
-숫자 입력 (띄어쓰기로 구분): 1 2 3 4 5
-```
 
 ## 참고 사항
 

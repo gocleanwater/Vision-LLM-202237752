@@ -1,122 +1,14 @@
 """과제 부분 (2026.10.10 실습 파트)"""
 
-# 1) 데이터 형식 (Data Types)
+# =====================================================
 
-name = "철수"
-age = 20
-height = 178.31754081
-
-print(f"이름: {type(name)}, 나이: {type(age)}, 키: {type(height)}")
-print()
-print("이름:", name, end=", ")
-print("나이: " + str(age) + "세", end=", ")
-print(f"키(m): {height/100:.2f}m", end=", ")
-print(f"키(cm):", str(height)[0:5] + "cm", end="\n\n")
-print("성인 여부:", age > 19)
-
+# TODO: score_str를 백분율로 표현한 뒤 정수로 변환하여 출력
 score_str = "0.8825"
 
 score_int = int(float(score_str) * 100)
 print(f"최종 점수: {score_int}점")
 
-
-# 2) List
-
-# Constructing List
-
-lst1 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]  # length: 10, index: 0-9
-lst2 = list((map(int, input("숫자 입력 (띄어쓰기로 구분): ").split())))
-
-print(lst1)
-print(lst2)
-
-
-# List Indexing
-
-print(lst1[0])
-print(lst1[3])
-print(lst1[9])
-# print(lst1[10])
-
-print(lst1[-1])
-print(lst1[-2])
-# print(lst1[-9])
-# print(lst1[-10])
-
-
-# Change Elements in a List
-
-print(lst1)
-lst1[0] = "X"
-print(lst1)
-lst1[-1] = "Y"
-print(lst1)
-
-print(lst1[0:1])
-
-# print(lst1[0:9])
-
-# print(lst1[0:10])
-
-# print(lst1[0:len(lst1)])
-
-# print(lst1[0:-1])
-
-# print(lst1[:])
-
-# print(lst1[:3])
-
-# print(lst1[3:])
-
-# print(lst1[0:5:2])
-
-# print(lst1[::2])
-
-# print(lst1[::-1])
-
-
-# new_lst = lst1[:3] + lst2
-# print(new_lst)
-
-
-# Nested Loop
-
-for i in range(10):  # i = 0           # i = 0           # i = 0
-    for j in range(10):  # i = 0, j = 0    # i = 0, j = 1    # i = 0, j = 2
-        my_tuple = (i, j)  # (0,0)           # (0,1)           # (0,2)
-        print(my_tuple)
-    print("\n------\n")
-
-
-# List Comprehension
-
-my_list1 = []
-
-for i in range(10):
-    my_list1.append(i)
-
-print(my_list1)
-
-test_lst1 = [0, 10, 100]
-test_lst2 = [x * 100 for x in test_lst1]
-
-print(test_lst2)
-
-my_arr1 = []
-
-for i in range(10):
-    for j in range(10):
-        my_arr1.append([i, j])
-
-print(my_arr1)
-
-my_arr2 = [[i, j] for i in range(10) for j in range(10)]
-
-print(my_arr2)
-
-my_arr3 = [[i, j] for i in range(10) for j in range(10) if i <= 1 and j <= 1]
-
-print(my_arr3)
+# =====================================================
 
 scores = [[45, 88, 92], [30, 75, 60], [95, 40, 50]]
 
@@ -125,23 +17,10 @@ passed_scores = [score for row in scores for score in row if score >= 50]
 print("합격 점수들:", passed_scores)
 
 
-# 3) Enumerate & Zip
+# =====================================================
 
 students = ["짱구", "철수", "맹구"]
 scores = [85, 92, 78]
-
-print(tuple(enumerate(students)))
-
-for idx, name in enumerate(students):
-    print(f"{idx}번 학생: {name}")
-
-for idx, name in enumerate(students, start=1):
-    print(f"{idx}번 학생: {name}")
-
-print(tuple(zip(students, scores)))
-
-for name, score in zip(students, scores):
-    print(f"{name}의 점수: {score}점")
 
 # TODO: enumerate와 zip을 조합하거나 활용하여 80점 이상 학생 정보 출력
 # TODO: 예상 출력 "1번 짱구 학생 (점수: 85점)"
@@ -153,92 +32,13 @@ for idx, (name, score) in enumerate(zip(students, scores), start=1):
     if score >= 80:
         print(f"{idx}번 {name}학생 (점수: {score}점)")
 
-
-# 4) Dictionary, JSON, YAML
-
-# Dictionary
-
-student_info = {"name": "맹구", "age": 21, "major": "컴퓨터공학"}
-
-for key, value in student_info.items():
-    print(f"{key}: {value}")
-
-print("이름:", student_info["name"])
-
-student_info["gpa"] = 3.8
-student_info["languages"] = ["Python", "C++"]
-
-print("학점:", student_info["gpa"])
-print("프로그래밍 언어:", student_info["languages"])
-
-
-# JSON
-
-import json
-
-with open("맹구_개인정보.json", "w", encoding="utf-8") as f:
-    json.dump(student_info, f, ensure_ascii=False, indent=4)
-
-print("JSON 파일 저장 완료!")
-
-
-# YAML
-
-import yaml
-
-with open("맹구_개인정보.yaml", "w", encoding="utf-8") as f:
-    yaml.safe_dump(student_info, f, allow_unicode=True, default_flow_style=False)
-
-print("YAML 파일 저장 완료!")
-
-
-# 5) NumPy
+# =====================================================
 
 # 기초 문법
 
 import numpy as np
 
-# Indexing 및 Slicing
-
-grid = np.array([[10, 20, 30], [40, 50, 60], [70, 80, 90]])
-
-print("우측 상단 2x2 영역:\n", grid[:2, 1:])
-
-
-# NumPy 연산 함수
-
 np_arr = np.array([1, 2, 3, 4, 5])
-
-print("Sum:", np_arr.sum())
-print("Minimum:", np_arr.min())
-print("Maximum:", np_arr.max())
-print("Mean:", np_arr.mean())
-print("Argmax:", np_arr.argmax())
-
-# [row: 학생, column: 과목]
-scores = np.array(
-    [[83, 92, 100], [76, 63, 58], [91, 99, 84]]  # 0번 학생  # 1번 학생  # 2번 학생
-)
-
-student_means = np.mean(scores, axis=1)
-print("학생별 평균 (axis=1):")
-print(student_means)
-
-print()
-
-subject_means = np.mean(scores, axis=0)
-print("과목별 평균 (axis=0):")
-print(subject_means)
-
-scores = np.array([85, 90, 100, 60, 90, 75, 90])
-
-is_ninety = scores == 90
-print("90점인 점수 Boolean 배열:", is_ninety)
-idx_ninety = np.where(scores == 90)
-print(list(idx_ninety[0]))
-
-print("90점인 학생 수:", (scores == 90).sum())
-print("80점 이상인 학생 수:", (scores >= 80).sum())
 
 # TODO: NumPy 연산 함수를 사용하여 배열을 정규화
 
@@ -255,18 +55,7 @@ np_arr_final = ((np_arr - np_arr.min()) / (np_arr.max() - np_arr.min())).astype(
 print(np_arr_final)
 print(np_arr_final.dtype)
 
-
-# Flatten
-
-grid = np.array([[10, 20, 30], [40, 50, 60], [70, 80, 90]])
-
-flat_grid = grid.flatten()
-
-print("Flatten 이전 모양 (shape):", grid.shape)
-print("Flatten 이후 모양 (shape):", flat_grid.shape)
-print("Flatten된 배열:", flat_grid)
-
-# =============================
+# =====================================================
 
 # < Section Project >
 
@@ -291,6 +80,8 @@ raw_scores = np.array(
 )
 
 subjects = ["국어", "수학", "과학"]
+
+# =====================================================
 
 
 # **실행 코드:**
