@@ -6,12 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-# 노트북에서 사용한 저장소의 원본 이미지를 읽습니다.
-image_path = Path(__file__).resolve().parent.parent / "src" / "images" / "basketball_crop.jpg"
-basketball = cv2.imread(str(image_path))
-if basketball is None:
-    raise FileNotFoundError(f"이미지를 읽을 수 없습니다: {image_path}")
+basketball = cv2.imread("../src/images/basketball_crop.jpg")
 
 # LAB 색공간에서 밝기 채널에 CLAHE를 적용하고 농구공 색상 범위를 마스킹합니다.
 lower_basketball_lab = np.array([70, 130, 70])
