@@ -1,0 +1,16 @@
+# Project01에서는 제출 파일만 Git에 포함한다.
+/*
+
+!/.gitignore
+!/README.md
+!/main.py
+!/vision.py
+!/game.py
+!/contracts.py
+
+!/assets/
+/assets/*
+!/assets/fonts/
+/assets/fonts/*
+!/assets/fonts/NotoSansKR-wght.ttf
+!/assets/fonts/OFL.txt
