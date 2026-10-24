@@ -25,11 +25,13 @@ from vision import (
 
 
 CAMERA_PIPELINE = (
-    "v4l2src device=/dev/video0 ! "
-    "video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 ! "
-    "videoconvert ! video/x-raw,format=BGR ! "
-    "queue leaky=downstream max-size-buffers=1 "
-    "max-size-bytes=0 max-size-time=0 ! "
+    "nvarguscamerasrc sensor-id=0 ! "
+    "video/x-raw(memory:NVMM), width=1280, height=720, framerate=30/1 ! "
+    "nvvidconv ! "
+    "video/x-raw, format=BGRx ! "
+    "videoconvert ! "
+    "video/x-raw, format=BGR ! "
+    "queue leaky=downstream max-size-buffers=1 ! "
     "appsink drop=true max-buffers=1 sync=false"
 )
 
@@ -50,7 +52,7 @@ REGIONS = {
 }
 FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/NotoSansKR-wght.ttf"
 FONT_SIZE = 22
-# None이면 USB 카메라. 저장 영상 경로를 넣으면 원본 FPS 간격으로 재생한다.
+# None이면 Jetson CSI 카메라. 저장 영상 경로를 넣으면 원본 FPS 간격으로 재생한다.
 VIDEO_PATH = None
 # 저장 영상과 문제를 대조할 때만 채운다. 완료 시도 순서로 사용하고 목록을 반복한다.
 # 장애로 무효가 된 시도는 완료 횟수가 늘지 않으므로 같은 고정 문제를 다시 사용한다.
