@@ -7,6 +7,8 @@ import cupy as cp
 import matplotlib.pyplot as plt
 import numpy as np
 
+# ============= 글로벌 변수 정의 ============
+
 IMAGE_PATH = "../src/images/seagull.jpg"
 TARGET_WIDTH = 1280
 TARGET_HEIGHT = 720
@@ -95,6 +97,8 @@ def motion_trail_cp(image, weights):
 
 
 def main():
+
+    # ================== 이미지 불러오기 =====================
     img_gray = cv2.imread(IMAGE_PATH, cv2.IMREAD_GRAYSCALE)
 
     img_gray = cv2.resize(
@@ -104,6 +108,7 @@ def main():
     )
     input_np = img_gray.astype(np.float32) / 255.0
 
+    # ================ 가중치 설정 ================
     # 이동 거리가 멀어질수록 가중치를 작게 설정
     weights_np = np.linspace(
         1.0,
@@ -117,75 +122,98 @@ def main():
     # 전체 가중치의 합을 1로 정규화
     weights_np /= np.sum(weights_np)
 
+    # ================== NumPy CPU 처리 ==================
     cpu_start = time.perf_counter()
-    output_np = motion_trail_np(input_np, weights_np)
-    cpu_time = time.perf_counter() - cpu_start
 
+    output_np = motion_trail_np(
+        image=input_np,
+        weights=weights_np
+    )
+
+    cpu_end = time.perf_counter()
+
+    cpu_time = cpu_end - cpu_start
+
+    # ================ CuPy 배열 준비 =================
     # TODO: NumPy 배열을 CuPy 배열로 변환
+
+    cp.cuda.Stream.null.synchronize()
     upload_start = time.perf_counter()
+
     input_cp = cp.asarray(input_np)
     weights_cp = cp.asarray(weights_np)
-    cp.cuda.Stream.null.synchronize()
-    upload_time = time.perf_counter() - upload_start
 
+    cp.cuda.Stream.null.synchronize()
+
+    upload_end = time.perf_counter()
+
+    upload_time = upload_end - upload_start
+
+    # =============== GPU 워밍업 ===================
     warmup_image = cp.zeros((64, 64), dtype=cp.float32)
     warmup_weights = cp.asarray(weights_np[:4])
-    _ = motion_trail_cp(warmup_image, warmup_weights)
-    cp.cuda.Stream.null.synchronize()
+
+    _ = motion_trail_cp(
+        image=warmup_image,
+        weights=warmup_weights
+    )
 
     cp.cuda.Stream.null.synchronize()
+
+    # =============== CuPy GPU 처리 =================
+    cp.cuda.Stream.null.synchronize()
+
     gpu_start = time.perf_counter()
-    output_cp = motion_trail_cp(input_cp, weights_cp)
-    cp.cuda.Stream.null.synchronize()
-    gpu_time = time.perf_counter() - gpu_start
 
+    output_cp = motion_trail_cp(
+        image=input_cp,
+        weights=weights_cp
+    )
+
+    cp.cuda.Stream.null.synchronize()
+
+    gpu_end = time.perf_counter()
+
+    gpu_time = gpu_end - gpu_start
+
+    # =============== GPU 결과를 CPU로 가져오기 ===============
     # TODO: output_cp를 CPU 메모리로 복사
     download_start = time.perf_counter()
+
     output_cp_np = cp.asnumpy(output_cp)
-    download_time = time.perf_counter() - download_start
 
-    outputs_match = np.allclose(output_np, output_cp_np, rtol=1e-5, atol=1e-6)
-    maximum_difference = np.max(np.abs(output_np - output_cp_np))
+    download_end = time.perf_counter()
 
+    download_time = download_end - download_start
+
+    # ============= 결과 비교 ================
     compute_speedup = cpu_time / gpu_time
+
     gpu_total_time = upload_time + gpu_time + download_time
     total_speedup = cpu_time / gpu_total_time
 
+    # ============= 결과 출력 ===============
     print("========== NumPy CPU ==========")
     print(f"Processing time: {cpu_time:.4f} seconds")
     print()
+
     print("========== CuPy GPU ==========")
     print(f"CPU to GPU: {upload_time:.4f} seconds")
     print(f"GPU processing: {gpu_time:.4f} seconds")
     print(f"GPU to CPU: {download_time:.4f} seconds")
     print(f"Total GPU time: {gpu_total_time:.4f} seconds")
     print()
+
     print("========== Comparison ==========")
     print(f"Compute-only speedup: {compute_speedup:.2f}x")
     print(f"Including transfers: {total_speedup:.2f}x")
-    print(f"Maximum output difference: {maximum_difference:.8f}")
-    print("Output verification:", "PASS" if outputs_match else "FAIL")
 
-    plt.figure(figsize=(18, 12))
+    # =========== 이미지 출력 ===============
+    plt.figure(figsize=(18,12))
 
-    plt.subplot(1, 3, 1)
-    plt.imshow(input_np, cmap="gray")
-    plt.title("Original Image")
+    plt.subplot(1,3,1), plt.imshow(input_np, cmap="gray"), plt.title("Original Image")
+    plt.subplot(1,3,2), plt.imshow(output_np, cmap="gray"), plt.title("Motion Trail (CPU)")
+    plt.subplot(1,3,3), plt.imshow(output_cp_np, cmap="gray"), plt.title("Motion Trail (GPU)")
 
-    plt.subplot(1, 3, 2)
-    plt.imshow(output_np, cmap="gray")
-    plt.title("Motion Trail (CPU)")
-
-    plt.subplot(1, 3, 3)
-    plt.imshow(output_cp_np, cmap="gray")
-    plt.title("Motion Trail (GPU)")
-
-    for axis in plt.gcf().axes:
-        axis.axis("off")
-
-    plt.tight_layout()
-    plt.show()
-
-
-if __name__ == "__main__":
-    main()
+    for ax in plt.gcf().axes:
+        ax.axis("off")

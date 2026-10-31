@@ -3,14 +3,18 @@
 - CNN 기초
 - MNIST 평가 그래프 그리기
 - MNIST 학습 모델 Feature Map확인
+- MNIST GPU 학습
+- CIFAR-10 GPU 학습 및 모델 저장/불러오기
 - 잔상 효과 NumPy, CuPy 코딩
 
 ## 파일 구조
 
 ```text
-2026.10.31/
+2026.11.01/
 ├── cnn_filter_assignment.py   # Smoothing/Sharpening CNN 필터 실습
 ├── mnist_cnn_assignment.py    # MNIST 학습, 평가 그래프, Feature Map 시각화
+├── MNIST_main_gpu.py          # GPU 기반 MNIST 학습 및 평가
+├── CIFAR10_main_gpu.py        # GPU 기반 CIFAR-10 학습 및 모델 저장/불러오기
 ├── motion_trail_assignment.py # NumPy/CuPy 잔상 효과 및 속도 비교
 └── README.md                  # 파일 설명, 실행 방법, 참고 사항
 ```
@@ -19,6 +23,10 @@
   - TODO는 Smoothing/Sharpening CNN의 구현임.
 - **mnist_cnn_assignment.py**: `../src/datasets`의 MNIST를 불러와 수업 시간에 했던 것처럼 `SimpleCNN`을 3 epoch 학습한다. Train/Test loss와 accuracy를 그리고, 학습된 모델의 `conv1`, `relu1`, `pool1`, `conv2`, `relu2`, `pool2` Feature Map을 `viridis`로 출력한다. 학습된 가중치는 `../src/models/MNIST/MNIST_CNN.pth`에 저장한다.
   - TODO는 학습 후 에폭별 loss와 accuracy 그래프 그리는 코드와 학습된 모델의 Feature Map을 확인하는 코드이다.
+- **MNIST_main_gpu.py**: `../src/datasets`의 MNIST를 불러와 `SimpleCNN`을 CUDA GPU에서 3 epoch 학습한다. Epoch마다 Train/Test loss와 accuracy, 학습 시간을 출력하고 전체 GPU 학습 시간을 확인한다.
+  - TODO는 GPU 기반 MNIST 데이터셋 학습 코드이다.
+- **CIFAR10_main_gpu.py**: `../src/datasets`의 CIFAR-10을 불러와 데이터 증강과 정규화를 적용하고, `ConvBlock` 3개로 구성한 `CIFAR10CNN`을 CUDA GPU에서 5 epoch 학습한다. GPU Warm-up 후 Epoch별 Train/Test loss와 accuracy, 학습 시간을 출력한다. 학습된 모델과 Optimizer 정보는 `../src/models/CIFAR10/CIFAR10_CNN.pth`에 저장하고 다시 불러와 모델 이름, Epoch, 마지막 테스트 정확도를 확인한다.
+  - TODO는 CUDA GPU 장치에서 CIFAR-10 데이터셋을 학습하고 평가하며, 각 Epoch 및 전체 학습 시간을 출력하는 코드이다.
 - **motion_trail_assignment.py**: 같은 갈매기 이미지를 1280×720으로 바꾸고, 길이 32의 잔상을 NumPy 픽셀 반복과 CuPy 배열 슬라이싱으로 각각 계산한다. CPU/GPU 결과가 같은지도 확인하고 처리 시간을 비교한다.
   - TODO는 NumPy와 CuPy를 통해 적은 잔상효과 코드 구현 부분이다.
 
@@ -29,7 +37,7 @@
 현장 Jetson에 필요한 라이브러리와 CUDA/CuPy 환경이 준비되어 있다는 전제로 작성했다. 모든 데이터 경로를 과제 폴더 기준 상대 경로로 적었으므로 **먼저 과제 폴더로 이동한다.**
 
 ```bash
-cd 2026.10.31
+cd 2026.11.01
 ```
 
 CNN Smoothing/Sharpening 필터:
@@ -44,13 +52,27 @@ MNIST CNN 학습, 평가 그래프, Feature Map 확인:
 python3 mnist_cnn_assignment.py
 ```
 
+MNIST CNN GPU 학습:
+
+```bash
+python3 MNIST_main_gpu.py
+```
+
+CIFAR-10 CNN GPU 학습 및 모델 저장/불러오기:
+
+```bash
+python3 CIFAR10_main_gpu.py
+```
+
 NumPy/CuPy 잔상 효과 및 속도 비교:
 
 ```bash
 python3 motion_trail_assignment.py
 ```
 
-MNIST는 `download=True`로 설정했다. `../src/datasets`에 데이터가 이미 있으면 그대로 읽고, 없을 때만 해당 위치로 내려받는다. MNIST 파일은 과제 폴더에 복사하지 않았다.
+MNIST와 CIFAR-10은 `download=True`로 설정했다. `../src/datasets`에 데이터가 이미 있으면 그대로 읽고, 없을 때만 해당 위치로 내려받는다. 데이터셋 파일은 과제 폴더에 복사하지 않았다.
+
+`MNIST_main_gpu.py`와 `CIFAR10_main_gpu.py`는 CUDA GPU를 사용하는 코드이다. `CIFAR10_CNN.pth`는 CIFAR-10 학습이 끝난 뒤 `../src/models/CIFAR10`에 생성된다.
 
 <br>
 
