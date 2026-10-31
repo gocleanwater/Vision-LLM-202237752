@@ -5,6 +5,8 @@
 - MNIST 학습 모델 Feature Map확인
 - MNIST GPU 학습
 - CIFAR-10 GPU 학습 및 모델 저장/불러오기
+- Bounding Box 좌표 변환 및 IoU 계산
+- Confidence Thresholding 및 NMS 구현
 - 잔상 효과 NumPy, CuPy 코딩
 
 ## 파일 구조
@@ -15,6 +17,8 @@
 ├── mnist_cnn_assignment.py    # MNIST 학습, 평가 그래프, Feature Map 시각화
 ├── MNIST_main_gpu.py          # GPU 기반 MNIST 학습 및 평가
 ├── CIFAR10_main_gpu.py        # GPU 기반 CIFAR-10 학습 및 모델 저장/불러오기
+├── iou_assignment.py          # Bounding Box 좌표 변환 및 IoU 계산
+├── nms_assignment.py          # Confidence Thresholding 및 NMS 구현
 ├── motion_trail_assignment.py # NumPy/CuPy 잔상 효과 및 속도 비교
 └── README.md                  # 파일 설명, 실행 방법, 참고 사항
 ```
@@ -27,6 +31,10 @@
   - TODO는 GPU 기반 MNIST 데이터셋 학습 코드이다.
 - **CIFAR10_main_gpu.py**: `../src/datasets`의 CIFAR-10을 불러와 데이터 증강과 정규화를 적용하고, `ConvBlock` 3개로 구성한 `CIFAR10CNN`을 CUDA GPU에서 5 epoch 학습한다. GPU Warm-up 후 Epoch별 Train/Test loss와 accuracy, 학습 시간을 출력한다. 학습된 모델과 Optimizer 정보는 `../src/models/CIFAR10/CIFAR10_CNN.pth`에 저장하고 다시 불러와 모델 이름, Epoch, 마지막 테스트 정확도를 확인한다.
   - TODO는 CUDA GPU 장치에서 CIFAR-10 데이터셋을 학습하고 평가하며, 각 Epoch 및 전체 학습 시간을 출력하는 코드이다.
+- **iou_assignment.py**: `(x, y, w, h)` 형식의 Bounding Box를 `(x1, y1, x2, y2)` 형식으로 변환하고, 두 Bounding Box의 교집합과 합집합 넓이를 사용하여 IoU를 계산한다. 겹치는 영역이 없으면 IoU는 0이며, 합집합 넓이가 0인 경우에도 `ZeroDivisionError`가 발생하지 않도록 0을 반환한다.
+  - TODO는 Bounding Box 좌표 변환 함수와 IoU 계산 함수의 구현이다.
+- **nms_assignment.py**: Confidence Score가 임계값보다 낮은 Bounding Box를 먼저 제거하고, 남은 Bounding Box를 Confidence Score가 높은 순서로 정렬한다. 가장 높은 점수의 Bounding Box와 다른 박스들의 IoU를 비교하여 중복 박스를 제거하는 NMS를 반복한다.
+  - TODO는 Confidence Thresholding 함수와 `np.argsort()`를 사용한 NMS 함수의 구현이다.
 - **motion_trail_assignment.py**: 같은 갈매기 이미지를 1280×720으로 바꾸고, 길이 32의 잔상을 NumPy 픽셀 반복과 CuPy 배열 슬라이싱으로 각각 계산한다. CPU/GPU 결과가 같은지도 확인하고 처리 시간을 비교한다.
   - TODO는 NumPy와 CuPy를 통해 적은 잔상효과 코드 구현 부분이다.
 
@@ -64,6 +72,18 @@ CIFAR-10 CNN GPU 학습 및 모델 저장/불러오기:
 python3 CIFAR10_main_gpu.py
 ```
 
+Bounding Box 좌표 변환 및 IoU 계산:
+
+```bash
+python3 iou_assignment.py
+```
+
+Confidence Thresholding 및 NMS 적용:
+
+```bash
+python3 nms_assignment.py
+```
+
 NumPy/CuPy 잔상 효과 및 속도 비교:
 
 ```bash
@@ -73,6 +93,8 @@ python3 motion_trail_assignment.py
 MNIST와 CIFAR-10은 `download=True`로 설정했다. `../src/datasets`에 데이터가 이미 있으면 그대로 읽고, 없을 때만 해당 위치로 내려받는다. 데이터셋 파일은 과제 폴더에 복사하지 않았다.
 
 `MNIST_main_gpu.py`와 `CIFAR10_main_gpu.py`는 CUDA GPU를 사용하는 코드이다. `CIFAR10_CNN.pth`는 CIFAR-10 학습이 끝난 뒤 `../src/models/CIFAR10`에 생성된다.
+
+`iou_assignment.py`는 별도의 외부 라이브러리 없이 실행할 수 있다. `nms_assignment.py`는 Confidence Score 정렬을 위해 NumPy를 사용한다.
 
 <br>
 
