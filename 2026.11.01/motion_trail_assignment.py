@@ -187,6 +187,12 @@ def main():
     download_time = download_end - download_start
 
     # ============= 결과 비교 ================
+    outputs_match = np.allclose(
+        output_np,
+        output_cp_np,
+        rtol=1e-5,
+        atol=1e-6,
+    )
     compute_speedup = cpu_time / gpu_time
 
     gpu_total_time = upload_time + gpu_time + download_time
@@ -207,6 +213,7 @@ def main():
     print("========== Comparison ==========")
     print(f"Compute-only speedup: {compute_speedup:.2f}x")
     print(f"Including transfers: {total_speedup:.2f}x")
+    print(f"CPU/GPU outputs match: {outputs_match}")
 
     # =========== 이미지 출력 ===============
     plt.figure(figsize=(18,12))
@@ -217,3 +224,9 @@ def main():
 
     for ax in plt.gcf().axes:
         ax.axis("off")
+
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()
