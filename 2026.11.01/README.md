@@ -8,6 +8,7 @@
 - Bounding Box 좌표 변환 및 IoU 계산
 - Confidence Thresholding 및 NMS 구현
 - 잔상 효과 NumPy, CuPy 코딩
+- Convolution 연산 NumPy, CuPy 코딩
 
 ## 파일 구조
 
@@ -20,6 +21,7 @@
 ├── iou_assignment.py          # Bounding Box 좌표 변환 및 IoU 계산
 ├── nms_assignment.py          # Confidence Thresholding 및 NMS 구현
 ├── motion_trail_assignment.py # NumPy/CuPy 잔상 효과 및 속도 비교
+├── convolution_assignment.py  # NumPy/CuPy Convolution 연산 및 속도 비교
 └── README.md                  # 파일 설명, 실행 방법, 참고 사항
 ```
 
@@ -37,6 +39,8 @@
   - TODO는 Confidence Thresholding 함수와 `np.argsort()`를 사용한 NMS 함수의 구현이다.
 - **motion_trail_assignment.py**: 같은 갈매기 이미지를 1280×720으로 바꾸고, 길이 32의 잔상을 NumPy 픽셀 반복과 CuPy 배열 슬라이싱으로 각각 계산한다. CPU/GPU 결과가 같은지도 확인하고 처리 시간을 비교한다.
   - TODO는 NumPy와 CuPy를 통해 적은 잔상효과 코드 구현 부분이다.
+- **convolution_assignment.py**: 같은 갈매기 이미지에 x축/y축 edge filter를 적용한다. NumPy는 출력 픽셀을 하나씩 계산하고, CuPy는 kernel의 각 위치에 대응하는 이미지 전체 영역을 slicing하여 GPU에서 병렬 계산한다. CPU/GPU 결과가 같은지도 확인하고 처리 시간을 비교한다.
+  - TODO는 CuPy를 사용한 2차원 convolution 함수, CPU/GPU 처리 과정, 결과 비교 및 출력 코드의 구현이다.
 
 <br>
 
@@ -90,11 +94,19 @@ NumPy/CuPy 잔상 효과 및 속도 비교:
 python3 motion_trail_assignment.py
 ```
 
+NumPy/CuPy Convolution 연산 및 속도 비교:
+
+```bash
+python3 convolution_assignment.py
+```
+
 MNIST와 CIFAR-10은 `download=True`로 설정했다. `../src/datasets`에 데이터가 이미 있으면 그대로 읽고, 없을 때만 해당 위치로 내려받는다. 데이터셋 파일은 과제 폴더에 복사하지 않았다.
 
 `MNIST_main_gpu.py`와 `CIFAR10_main_gpu.py`는 CUDA GPU를 사용하는 코드이다. `CIFAR10_CNN.pth`는 CIFAR-10 학습이 끝난 뒤 `../src/models/CIFAR10`에 생성된다.
 
 `iou_assignment.py`는 별도의 외부 라이브러리 없이 실행할 수 있다. `nms_assignment.py`는 Confidence Score 정렬을 위해 NumPy를 사용한다.
+
+`motion_trail_assignment.py`와 `convolution_assignment.py`는 CUDA GPU와 CuPy를 사용하는 코드이다.
 
 <br>
 
@@ -164,3 +176,23 @@ output  = [6, 15, 25, 35, 45]
 ```
 
 이 값을 기준으로 NumPy 반복문과 배열 slicing의 계산 방향을 확인했다.
+
+### CuPy Convolution에서 헷갈렸던 부분
+
+CPU에서는 출력 픽셀을 기준으로 반복문을 돌면서 kernel 크기만큼 이미지를 잘라 가중합을 구했다. 그런데 GPU에서도 출력 픽셀을 하나씩 반복하면 Python 반복문이 너무 많아서 GPU를 사용하는 의미가 적어진다.
+
+그래서 GPU 코드는 반대로 kernel의 위치를 기준으로 반복했다.
+
+```python
+input_region = padded_image[
+    kernel_y:kernel_y + output_height * stride:stride,
+    kernel_x:kernel_x + output_width * stride:stride
+]
+output += input_region * kernel[kernel_y, kernel_x]
+```
+
+예를 들어 `kernel_y=0`, `kernel_x=1`이면 모든 출력 위치에서 kernel의 `[0, 1]`과 만나는 입력 픽셀들을 한 번에 가져온다. 그리고 그 배열 전체에 `kernel[0, 1]`을 곱해서 output 전체에 누적한다.
+
+처음에는 convolution이니까 무조건 출력 이미지의 y, x를 하나씩 돌아야 한다고 생각했는데, 계산 순서를 kernel 기준으로 바꾸면 kernel 크기만큼의 반복문만 Python에서 실행하고 이미지 전체 곱셈과 덧셈은 GPU에서 병렬 처리할 수 있었다.
+
+또 GPU 시간은 비동기 연산 때문에 `time.perf_counter()`만 사용하면 실제 연산이 끝나기 전에 시간이 측정될 수 있다. 그래서 측정 전후에 `cp.cuda.Stream.null.synchronize()`를 넣었다. 처음 실행할 때 CUDA 초기화 시간이 포함되지 않도록 작은 이미지로 warm-up도 먼저 수행했다.
