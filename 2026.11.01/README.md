@@ -18,6 +18,7 @@
 ├── mnist_cnn_assignment.py    # MNIST 학습, 평가 그래프, Feature Map 시각화
 ├── MNIST_main_gpu.py          # GPU 기반 MNIST 학습 및 평가
 ├── CIFAR10_main_gpu.py        # GPU 기반 CIFAR-10 학습 및 모델 저장/불러오기
+├── CIFAR10_CNN.pth            # 학습이 완료된 CIFAR-10 모델 체크포인트
 ├── iou_assignment.py          # Bounding Box 좌표 변환 및 IoU 계산
 ├── nms_assignment.py          # Confidence Thresholding 및 NMS 구현
 ├── motion_trail_assignment.py # NumPy/CuPy 잔상 효과 및 속도 비교
@@ -33,6 +34,7 @@
   - TODO는 GPU 기반 MNIST 데이터셋 학습 코드이다.
 - **CIFAR10_main_gpu.py**: `../src/datasets`의 CIFAR-10을 불러와 데이터 증강과 정규화를 적용하고, `ConvBlock` 3개로 구성한 `CIFAR10CNN`을 CUDA GPU에서 5 epoch 학습한다. GPU Warm-up 후 Epoch별 Train/Test loss와 accuracy, 학습 시간을 출력한다. 학습된 모델과 Optimizer 정보는 `../src/models/CIFAR10/CIFAR10_CNN.pth`에 저장하고 다시 불러와 모델 이름, Epoch, 마지막 테스트 정확도를 확인한다.
   - TODO는 CUDA GPU 장치에서 CIFAR-10 데이터셋을 학습하고 평가하며, 각 Epoch 및 전체 학습 시간을 출력하는 코드이다.
+- **CIFAR10_CNN.pth**: `CIFAR10_main_gpu.py`로 5 epoch 학습한 `CIFAR10CNN` 체크포인트의 복사본이다. GitHub에서 학습 결과를 바로 확인하거나 재학습 없이 가중치를 불러올 수 있도록 과제 폴더에 함께 추가했다.
 - **iou_assignment.py**: `(x, y, w, h)` 형식의 Bounding Box를 `(x1, y1, x2, y2)` 형식으로 변환하고, 두 Bounding Box의 교집합과 합집합 넓이를 사용하여 IoU를 계산한다. 겹치는 영역이 없으면 IoU는 0이며, 합집합 넓이가 0인 경우에도 `ZeroDivisionError`가 발생하지 않도록 0을 반환한다.
   - TODO는 Bounding Box 좌표 변환 함수와 IoU 계산 함수의 구현이다.
 - **nms_assignment.py**: Confidence Score가 임계값보다 낮은 Bounding Box를 먼저 제거하고, 남은 Bounding Box를 Confidence Score가 높은 순서로 정렬한다. 가장 높은 점수의 Bounding Box와 다른 박스들의 IoU를 비교하여 중복 박스를 제거하는 NMS를 반복한다.
@@ -41,6 +43,29 @@
   - TODO는 NumPy와 CuPy를 통해 적은 잔상효과 코드 구현 부분이다.
 - **convolution_assignment.py**: 같은 갈매기 이미지에 x축/y축 edge filter를 적용한다. NumPy는 출력 픽셀을 하나씩 계산하고, CuPy는 kernel의 각 위치에 대응하는 이미지 전체 영역을 slicing하여 GPU에서 병렬 계산한다. CPU/GPU 결과가 같은지도 확인하고 처리 시간을 비교한다.
   - TODO는 CuPy를 사용한 2차원 convolution 함수, CPU/GPU 처리 과정, 결과 비교 및 출력 코드의 구현이다.
+
+## 저장된 CIFAR-10 모델
+
+`CIFAR10_CNN.pth`는 모델 구조 자체가 아니라 학습 결과와 메타데이터를 담은 PyTorch 체크포인트이다. 저장된 마지막 테스트 정확도는 **81.95%**이다.
+
+체크포인트에는 다음 정보가 포함되어 있다.
+
+- `model_state_dict`: 학습된 모델 가중치
+- `optimizer_state_dict`: Optimizer 상태
+- `model_name`, `epochs`, `test_accuracy`: 모델 및 학습 결과 정보
+- `class_names`: CIFAR-10 클래스 이름
+- `mean`, `std`: 학습과 추론에 사용한 정규화 값
+
+모델을 불러올 때는 `CIFAR10_main_gpu.py`와 같은 `CIFAR10CNN` 구조를 먼저 생성한 뒤 `model_state_dict`를 적용해야 한다.
+
+```python
+checkpoint = torch.load("CIFAR10_CNN.pth", map_location="cpu", weights_only=True)
+model = CIFAR10CNN()
+model.load_state_dict(checkpoint["model_state_dict"])
+model.eval()
+```
+
+`CIFAR10_main_gpu.py`를 다시 실행하면 학습된 모델은 `../src/models/CIFAR10/CIFAR10_CNN.pth`에 저장된다. 현재 과제 폴더의 `CIFAR10_CNN.pth`는 2026년 10월 31일 Jetson에서 학습하고 저장한 파일을 복사한 것이다.
 
 <br>
 
