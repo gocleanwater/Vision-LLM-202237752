@@ -141,6 +141,63 @@ def validate_menus(payload, available, excluded):
     return result
 
 
+# 구매 재료 질문에서 메뉴를 추출한다. 실제 식사 선택과 구분하므로 기록 함수는 부르지 않는다.
+def shopping_dish(text):
+    if re.search(r'안\s*(?:먹|만들)|않|싫', text):
+        return None
+    patterns = [
+        # 끝의 ‘이’는 떡볶이·달걀말이의 일부일 수 있어 임의로 제거하지 않는다.
+        r'(?:^|[.!?])\s*([^.!?]+?)(?:가|을|를)?\s*(?:먹고|만들고)\s*싶',
+        r'(?:^|[.!?])\s*([^.!?]+?)(?:을|를)?\s*(?:만들려면|만들려고|만들건데|만들거야|요리하려면)',
+        r'(?:^|[.!?])\s*([^.!?]+?)(?:에|의)?\s*(?:필요한|부족한|추가로\s*필요한)\s*재료',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+        name = re.sub(r'^(?:(?:나는|나|저는|저|오늘은|오늘|지금|그럼|그래)(?:[,!]\s*|\s+))+', '', match[1]).strip()
+        if re.search(r'(?:^|\s)(?:아니면|또는|대신에?|말고)(?:\s|$)', name):
+            return None
+        if name.replace(' ', '') in {'어떤메뉴', '무슨메뉴', '아무메뉴', '어떤요리', '아무거나', '그거', '이거', '저거'}:
+            return None
+        try:
+            return clean_name(name)
+        except ValueError:
+            return None
+    return None
+
+
+# 이름을 재료 비교용 키로 바꾼다. 등록된 한영 이름·별칭만 같은 ID로 연결한다.
+def ingredient_key(value):
+    key = clean_name(value).replace(' ', '').casefold()
+    for alias, ident in INGREDIENT_ALIASES.items():
+        if alias.replace(' ', '').casefold() == key:
+            return ident
+    return key
+
+
+# Gemma는 전체 필요 재료를 제안하고, 보유 재료를 빼는 계산은 코드가 담당한다.
+def missing_ingredients(payload, dish, available):
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    if not isinstance(payload, dict) or set(payload) != {'dish_name', 'ingredients'}:
+        raise ValueError('필요 재료 JSON 형식 오류')
+    if normalize_name(payload['dish_name']) != normalize_name(dish):
+        raise ValueError('질문한 메뉴와 다른 메뉴')
+    ingredients = payload['ingredients']
+    if not isinstance(ingredients, list) or not ingredients:
+        raise ValueError('전체 필요 재료 목록이 필요합니다.')
+    owned = {ingredient_key(value) for value in available}
+    missing, seen = [], set()
+    for value in ingredients:
+        name = clean_name(value)
+        key = ingredient_key(name)
+        if key not in owned and key not in seen:
+            missing.append(INGREDIENT_NAMES.get(key, name))
+            seen.add(key)
+    return missing
+
+
 def selection(text, state):
     """긍정 선택 패턴과 등록된 모호·부정 표현을 검사한다. 모든 자연어 모호성을 판별하지는 못한다."""
     if re.search(r'안\s*먹|않|말자|먹지|먹을까|먹자마자', text) or '?' in text or '？' in text:
@@ -191,7 +248,7 @@ def selection(text, state):
 
 # 한 발화를 처리하고 화면·TTS용 한국어 문장을 반환한다.
 # observe와 recommend는 전달받은 함수다. 실제 모델 또는 테스트용 가상 응답을 연결할 수 있다.
-def handle_text(text, state, observe, recommend, history_path, today=None):
+def handle_text(text, state, observe, recommend, history_path, today=None, required_ingredients=None):
     text = ' '.join(text.split()).strip()
     if not text:
         return ''
@@ -201,6 +258,36 @@ def handle_text(text, state, observe, recommend, history_path, today=None):
         return '추천을 마쳤어요.'
     # 1. 의도 구분. 부정·불명확한 선택을 먼저 처리해 “추천”이라는 단어만으로 실행하지 않는다.
     compact = text.replace(' ', '')
+    # 특정 메뉴의 구매 재료 조회는 메뉴 추천·선택보다 먼저 분기한다. 현재 사진을 새로 사용한다.
+    shopping_query = bool(re.search(r'사와야|사와애|사야|사올|사오|사와|구매|살재료|필요한재료|추가재료|부족한재료', compact)) and ('재료' in text or '뭐사' in compact or '뭘사' in compact)
+    dish = shopping_dish(text) if shopping_query else None
+    ordinary_recommendation = re.search(r'추천(?:해|좀|부탁|줘)|추천[.!?]*$', compact)
+    if shopping_query and (dish or not ordinary_recommendation):
+        if re.search(r'알려주지마|알려주지말|안알려', compact):
+            return '필요한 재료 안내를 취소했어요.'
+        if dish is None:
+            return '어떤 메뉴의 재료를 살지 메뉴 이름을 말해 주세요.'
+        if required_ingredients is None:
+            return '필요한 재료를 확인하지 못했어요. 다시 말씀해 주세요.'
+        try:
+            available = list(dict.fromkeys(observe()))
+            if not available:
+                return '식재료를 확인하지 못했어요. 카메라 앞에 재료를 보여 주세요.'
+        except Exception:
+            logging.exception('구매 재료 조회의 현재 재료 인식 실패')
+            return '식재료를 확인하지 못했어요. 카메라와 재료를 확인해 주세요.'
+        feedback = ''
+        for attempt in range(2):
+            try:
+                payload = required_ingredients(dish, available, feedback)
+                missing = missing_ingredients(payload, dish, available)
+                return '지금 사와야 하는 재료는 ' + ', '.join(missing) + '입니다.' if missing else '지금 사와야 하는 재료는 없어요.'
+            except (ValueError, TypeError):
+                feedback = '질문한 메뉴의 비어 있지 않은 전체 재료 목록을 정확한 JSON 형식으로 반환하세요.'
+            except Exception:
+                logging.exception('필요 재료 생성 실패')
+                return '필요한 재료를 확인하지 못했어요. 다시 말씀해 주세요.'
+        return '필요한 재료를 확인하지 못했어요. 다시 말씀해 주세요.'
     if re.search(r'추천(?:은|는)?(?:하지마|하지말|해주지마|해주지말|안해|말자)|추천그만|그만추천', compact):
         clear_state(state)
         return '추천을 마쳤어요.'
@@ -323,7 +410,8 @@ def run():
                     # 한 발화 녹음을 끝내고 녹음 프로세스를 닫은 뒤 Whisper를 실행한다.
                     text = speech_to_text(args.resource_root, runtime / 'input.wav', args.mic_device, args.rms_threshold)
                     print('STT 결과:', text, flush=True)
-                    response = handle_text(text, state, vision.observe, gemma.recommend, PROJECT_ROOT / 'recent_meals.json')
+                    response = handle_text(text, state, vision.observe, gemma.recommend, PROJECT_ROOT / 'recent_meals.json',
+                                           required_ingredients=gemma.required_ingredients)
                     if response:
                         print(response, flush=True)
                         # 재생이 끝나야 다음 반복에서 다시 녹음한다. 처리·재생 중 새 음성을 모으지 않는다.

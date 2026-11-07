@@ -117,6 +117,22 @@ class Gemma:
         )
         return self.request({'prompt': prompt})
 
+    # 특정 요리의 전체 필요 재료를 제안한다. 현재 보유 목록과의 차집합은 main.py에서 계산한다.
+    def required_ingredients(self, dish, available, feedback):
+        prompt = (
+            '요청한 음식 한 가지를 만드는 데 필요한 전체 재료 이름을 한국어로 제안하세요. '
+            'dish_name은 requested_dish의 표기를 그대로 복사하세요. '
+            '보유 재료도 빼지 말고 전체 목록에 넣으세요. 기본 양념도 자동 보유로 가정하지 마세요. '
+            '수량, 조리 순서, 이유, 다른 메뉴, 매장 재고와 가격은 쓰지 마세요. '
+            '이름만 나열하고 같은 재료는 중복하지 마세요. 지원 클래스 밖 재료도 허용합니다. '
+            '설명 없이 정확한 JSON만 반환하세요: '
+            '{"dish_name":"요청한 메뉴명","ingredients":["전체 필요 재료명"]}.\n'
+            + json.dumps({'requested_dish': dish,
+                          'observed': {key: INGREDIENT_NAMES[key] for key in available},
+                          'correction': feedback}, ensure_ascii=False)
+        )
+        return self.request({'prompt': prompt})
+
     # 이미지 확인 요청. 전체 장면 대신 후보 번호가 붙은 콜라주 한 장을 보낸다.
     def check_candidates(self, image_path, candidates):
         prompt = (
