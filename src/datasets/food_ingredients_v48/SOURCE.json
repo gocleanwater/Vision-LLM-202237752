@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/ahmedalashii/Yolov11-Ingredients-Detection.git",
+  "commit": "e27ebcde3c36d5d2b924d6e0b8d015e82f65413a",
+  "original_dataset": "https://universe.roboflow.com/yaman-e/food-ingredients-detection-qfit7/dataset/48",
+  "license": "CC BY 4.0 (dataset, per publisher)",
+  "downloaded_utc": "2026-11-07T08:27:19.967553+00:00",
+  "note": "Repository mirror: expected 1425 train, 286 valid, 190 test images; original landing page lists 1428 train."
+}

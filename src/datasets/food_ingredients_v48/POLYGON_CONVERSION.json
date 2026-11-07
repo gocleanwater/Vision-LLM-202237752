@@ -1,0 +1,54 @@
+{
+  "method": "axis-aligned bounding box enclosing all polygon vertices; normalized YOLO cx cy width height",
+  "backup": "Original labels are available at the source commit in SOURCE.json; additional backup retained in ~/vision-llm on Jetson.",
+  "files": [
+    {
+      "file": "train/labels/WhatsApp-Image-2024-03-12-at-4-10-22-PM_jpeg.rf.8430e0d83aff59010ca902ca3783d14b.txt",
+      "converted": [
+        {
+          "line": 1,
+          "class": 6,
+          "vertices": 57,
+          "bbox": [
+            0.33887553437499995,
+            0.6240234375,
+            0.3238514968749999,
+            0.451171875
+          ]
+        }
+      ]
+    },
+    {
+      "file": "train/labels/WhatsApp-Image-2024-03-21-at-11-55-08-PM-15-_jpeg.rf.822fd11af22ae7ed5f7828809bae8b2d.txt",
+      "converted": [
+        {
+          "line": 2,
+          "class": 35,
+          "vertices": 37,
+          "bbox": [
+            0.078125,
+            0.56640625,
+            0.15625,
+            0.50390625
+          ]
+        }
+      ]
+    },
+    {
+      "file": "train/labels/WhatsApp-Image-2024-03-26-at-3-33-43-PM-5-_jpeg.rf.cde0c159ab4c2289eb5bf6002affd780.txt",
+      "converted": [
+        {
+          "line": 1,
+          "class": 24,
+          "vertices": 27,
+          "bbox": [
+            0.18880208359375,
+            0.86572265625,
+            0.3723958328125,
+            0.2666015625
+          ]
+        }
+      ]
+    }
+  ]
+}

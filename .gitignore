@@ -8,3 +8,14 @@ src/datasets/cifar-10-python.tar.gz
 src/models/CIFAR10/*.pth
 src/models/MNIST/*.pth
 src/models/YOLO/*.pt
+
+# Local training environments and generated results
+.venv*/
+__pycache__/
+*.py[cod]
+runs/
+weights/
+*.cache
+src/datasets/food_ingredients_v48/label_backups/
+# Pretrained seed required for ingredient fine-tuning
+!src/models/YOLO/yolo11n.pt

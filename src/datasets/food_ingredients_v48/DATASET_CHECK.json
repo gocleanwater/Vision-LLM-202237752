@@ -1,0 +1,61 @@
+{
+  "splits": {
+    "train": {
+      "images": 1425,
+      "labels": 1425
+    },
+    "valid": {
+      "images": 286,
+      "labels": 286
+    },
+    "test": {
+      "images": 190,
+      "labels": 190
+    }
+  },
+  "classes": 36,
+  "objects_per_class": {
+    "banana": 110,
+    "bell pepper": 212,
+    "bulgur": 18,
+    "cabbage": 16,
+    "carrot": 23,
+    "cheese": 91,
+    "chicken": 34,
+    "chickpeas": 40,
+    "cucumber": 161,
+    "egg": 343,
+    "eggplant": 125,
+    "farfalle pasta": 19,
+    "fusilli pasta": 24,
+    "garlic": 184,
+    "green pepper": 151,
+    "ground meat": 21,
+    "ketchup": 28,
+    "lemon": 448,
+    "margarine": 29,
+    "mayonnaise": 31,
+    "milk": 137,
+    "mushroom": 339,
+    "olive": 247,
+    "olive oil": 100,
+    "onion": 360,
+    "parsley": 24,
+    "potato": 523,
+    "red lentils": 29,
+    "rice": 97,
+    "sausage": 20,
+    "spaghetti": 26,
+    "tomato": 440,
+    "tomato paste": 101,
+    "turkish dumplings": 17,
+    "yogurt": 31,
+    "zucchini": 162
+  },
+  "empty_labels": 1,
+  "errors": [],
+  "source_note": "Mirror contains 1901 images, original page lists 1904. No files were removed locally.",
+  "polygon_annotations": [],
+  "note": "All 1901 label files validated as YOLO detection boxes. Three polygon rows converted with original labels backed up; class IDs and unrelated rows preserved.",
+  "validated_box_rows": 4761
+}
