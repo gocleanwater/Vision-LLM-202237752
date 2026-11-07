@@ -1,6 +1,6 @@
 # 구조 설계 — v0.1
 
-상태: 구현 전. 기능 기준은 [기능명세](FEATURE_SPEC.md), JSON 기준은 [데이터 계약](DATA_CONTRACTS.md)이다.
+상태: 네 파일로 1차 구현. 실제 모델·장치 통합 검증 전. 기능 기준은 [기능명세](FEATURE_SPEC.md), JSON 기준은 [데이터 계약](DATA_CONTRACTS.md)이다.
 
 ## 1. 선택한 구성과 대안
 
@@ -98,22 +98,13 @@ Mac의 `.venv-ingredients`와 루트 `train_yolo_ingredients.py`는 학습용이
 
 여러 프로세스도 Jetson 메모리를 공유한다. GPU 추론은 우선 순차 실행하며 모델 상주·재로딩 방식은 메모리·지연 측정 후 정한다. 학습·변환 작업은 이 구조 설계와 별개다.
 
-## 8. 제안 파일 구조
+## 8. 실제 코드 구성
 
-다음은 앞으로 구현할 구조이며 아직 이 파일들이 존재한다는 뜻이 아니다.
+사용자의 간단한 함수 중심 구성 요청에 따라 초안의 contracts/policy/history/pipeline/adapters/config 분할을 네 파일로 합쳤다.
 
-```text
-[Project02]/
-  ingredients_int8.engine # 최종 INT8 모델 배치 가정; 아직 복사하지 않음
-  recent_meals.json       # 최근 3일 식사 결정 기록; 구현 후 생성·갱신, 비공개
-  main.py                 # 실행 진입점과 조정기 연결
-  contracts.py            # 요청·관측·추천 데이터 타입
-  policy.py               # 이름 정규화, 의도·출력 검증, 문장 생성
-  history.py              # 날짜로 최근 기록 읽기, 메뉴 선택 시 저장
-  pipeline.py             # 상태 전이와 단계 연결
-  adapters/               # camera, yolo, gemma, stt, tts
-  tests/                  # 장치 없는 하네스, 가상 입력, 기대 결과
-  config/                 # 환경별 경로, 클래스 매핑, 음식 별칭
-  runtime/                # 덮어쓰는 현재 사진·음성 파일; 버전 관리 제외
-  documents/              # 설계와 실제 검증 기록
-```
+- `main.py`: 의도 분기, 이름·메뉴 검증, KST 날짜와 원자적 식사 기록 저장, 이벤트 상태, 음성 실행 루프.
+- `vision.py`: `int8_yolo.py`의 GStreamer와 YOLO predict를 재사용한다. 모델은 지연 로딩 후 재사용하고 카메라는 매 요청 열어 촬영한 뒤 닫는다. bbox 검증·콜라주·VLM 결과 병합도 담당한다.
+- `gemma.py`: 06 노트북의 Llama·Gemma4ChatHandler·base64 이미지 입력. 지정한 Python에서 JSON 한 줄 요청·응답으로 통신하며 같은 모델을 재사용한다. 기본 Python은 메인 프로그램과 같다. 별도 가상환경은 `--gemma-python`으로 지정한다.
+- `speech.py`: 06 노트북의 arecord·whisper-cli·Piper·aplay 인수 목록을 재사용한다. 녹음은 raw PCM 음량 기반 발화 구간 감지로 바꿨다. 한 발화 뒤 녹음 전용 프로세스 그룹을 정리하므로 처리·TTS 중 새 입력을 모으지 않는다.
+
+외부 호출 제한은 Whisper/Piper/aplay 각 120초, Gemma 응답 180초, 마이크 데이터 수신 중단 5초다. 마이크가 정상적으로 무음을 계속 보내면 발화 대기는 계속한다. 음성은 최대 15초다. 카메라 읽기·YOLO의 네이티브 호출에는 강제 종료용 별도 프로세스를 두지 않았으며 실제 Jetson에서 멈춤·취소 동작을 확인해야 한다. GPU 메모리와 Gemma `n_ctx=2048`에서 후보 이미지·메뉴 출력이 수용되는지도 미검증이다.
