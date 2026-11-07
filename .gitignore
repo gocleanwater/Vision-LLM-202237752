@@ -1,4 +1,5 @@
 .DS_Store
+.env
 
 # Generated datasets and model weights
 src/datasets/MNIST/raw/
