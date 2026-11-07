@@ -23,6 +23,9 @@ ALIASES = {'계란말이': '달걀말이', '달걀말이': '달걀말이',
 INGREDIENT_ALIASES = {**{k: k for k in INGREDIENT_NAMES},
                       **{v: k for k, v in INGREDIENT_NAMES.items()}, '계란': 'egg'}
 
+# 선택 문장 판정과 동사 제거에 같은 패턴을 사용해 두 규칙이 어긋나지 않게 한다.
+SELECTION_END = r'(?:먹자|먹을게요?|먹을래요?|먹겠습니다|먹기로\s*하자)[.!\s]*$'
+
 
 # 표시·저장용 이름 정리. 문자열인지 검사하고, 공백을 정리하고, 등록된 음식 별칭을 바꾼다.
 def clean_name(value):
@@ -140,32 +143,49 @@ def validate_menus(payload, available, excluded):
 
 def selection(text, state):
     """긍정 선택 패턴과 등록된 모호·부정 표현을 검사한다. 모든 자연어 모호성을 판별하지는 못한다."""
-    # 정규식으로 문장 패턴을 찾는다. 부정이나 질문이면 먹기로 결정했다고 저장하지 않는다.
-    if re.search(r'안\s*먹|않|말자|먹지|먹을까|먹을까요|먹자마자', text) or '?' in text or '？' in text:
+    if re.search(r'안\s*먹|않|말자|먹지|먹을까|먹자마자', text) or '?' in text or '？' in text:
         return []
-    # 문장 끝($)이 명확한 긍정 선택 표현이어야 뒤의 메뉴 이름 추출로 넘어간다.
-    if not re.search(r'(먹자|먹을게요?|먹을래요?|먹겠습니다|먹기로\s*하자)[.!\s]*$', text):
+    if not re.search(SELECTION_END, text):
         return []
-    # re.sub는 일치하는 부분을 바꾼다. 여기서는 앞의 “그래, 오늘은” 같은 말을 지운다.
-    text = re.sub(r'^(그래[,.!]?\s*|그럼\s*|오늘은\s*|오늘\s*|나는\s*|추천한\s*|추천해\s*준\s*)+', '', text).strip()
-    # “둘 다”는 메뉴 이름 대신 마지막 추천 목록을 가리킨다. 목록이 없으면 빈 목록이다.
-    if re.match(r'^(둘\s*다|모두|다)\s*먹', text):
+    # 접두어 뒤에 공백·문장부호가 있어야 제거한다. “그래놀라”의 “그래”는 보존한다.
+    text = re.sub(r'^(?:(?:그래서|그래|그럼|오늘은|오늘|나는|추천한|추천해\s*준)(?:[,.!]\s*|\s+))+', '', text).strip()
+    name = re.sub(SELECTION_END, '', text).strip()
+    if not name or len(name) > 100:
+        return []
+    # 복합 문장은 먼저 거른다. “주먹밥”처럼 이름에 있는 글자 “먹”만으로 거절하지 않는다.
+    if re.search(r'말고(?:\s|$)|(?:^|\s)(?:대신에?|아니면|또는|혹은|안|아니|싫어)(?:\s|$)|먹(?:는|고|을|자고|기로)(?:\s|$)', name):
+        return []
+    # 이름 부분 전체가 “둘 다”여야 한다. “둘 다 먹는 대신 …”를 이전 메뉴로 연결하지 않는다.
+    if re.fullmatch(r'둘\s*다|모두|다', name):
         return [m['dish_name'] for m in state['last_menus']]
-    # 문장 끝의 “먹자”와 조사(을/를 등)를 제거해 저장할 메뉴 이름만 남긴다.
-    name = re.sub(r'\s*(먹자|먹을게요?|먹을래요?|먹겠습니다|먹기로\s*하자)[.!\s]*$', '', text)
-    name = re.sub(r'(으로|로|을|를|은|는)$', '', name).strip()
-    # 지시어·불특정 음식 표현을 메뉴명으로 저장하지 않는다. 띄어쓰기 차이도 함께 처리한다.
-    # 마지막 추천이 있어도 “그걸”을 임의로 한 메뉴에 연결하지 않고 이름을 다시 묻는다.
+
+    # “그걸로”처럼 지시어에 조사가 붙어도 메뉴 이름으로 기록하지 않는다.
     compact_name = name.replace(' ', '')
-    if compact_name in {'', '그거', '이거', '저거', '그것', '이것', '저것',
-                        '그걸', '이걸', '저걸', '뭐', '뭔가', '무언가',
-                        '아무거나', '둘다', '다', '모두'}:
+    if re.fullmatch(r'(?:그거|이거|저거|그것|이것|저것|그걸|이걸|저걸|뭐|뭔가|무언가|아무거나|둘다|다|모두)(?:으로|로|을|를|은|는)?', compact_name):
         return []
-    if re.fullmatch(r'(아무|어떤)(음식|요리|메뉴)(이나|나|든지)?', compact_name):
+    if re.fullmatch(r'(아무|어떤)(음식|요리|메뉴)(?:이나|나|든지|으로|로|을|를|은|는)?', compact_name):
         return []
-    # 복합 문장을 요리명으로 저장하지 않고 한 메뉴를 명확히 말하도록 요청한다.
-    if re.search(r'먹|말고|대신|아니면|또는|혹은|[?？]|\s(?:안|아니|싫어)\b', name):
-        return []
+
+    # 이미 아는 메뉴는 원래 이름과 대조해 조사를 떼어낸다. 선택을 이 목록으로 제한하지는 않는다.
+    known = [m['dish_name'] for m in state['last_menus']] + list(ALIASES)
+    key = normalize_name(name)
+    for dish in known:
+        if key == normalize_name(dish):
+            return [clean_name(dish)]
+    for dish in known:
+        if any(key == normalize_name(dish + particle) for particle in ['으로', '로', '을', '를', '은', '는']):
+            return [clean_name(dish)]
+
+    # 띄어 쓴 조사는 제거한다. 모르는 이름의 붙어 있는 “로”는 “마시멜로”일 수 있어 보존한다.
+    name = re.sub(r'\s+(으로|로|을|를|은|는)$', '', name).strip()
+    match = re.fullmatch(r'(.+)(을|를|은|는)', name)
+    if match:
+        base, particle = match.groups()
+        last = ord(base[-1])
+        if 0xAC00 <= last <= 0xD7A3:
+            has_final = (last - 0xAC00) % 28 != 0  # 한글 음절에 받침이 있는지 확인한다.
+            if has_final == (particle in {'을', '은'}):
+                name = base.strip()
     return [clean_name(name)]
 
 
@@ -179,13 +199,20 @@ def handle_text(text, state, observe, recommend, history_path, today=None):
     if text.rstrip('.!') in {'그만', '취소', '그만할게', '추천 종료'}:
         clear_state(state)
         return '추천을 마쳤어요.'
-    # 1. 의도 구분: 메뉴 선택 / 재료 조회 / 새 추천 / 다른 메뉴 요청.
-    names = selection(text, state)
+    # 1. 의도 구분. 부정·불명확한 선택을 먼저 처리해 “추천”이라는 단어만으로 실행하지 않는다.
     compact = text.replace(' ', '')
-    inventory = ('냉장고' in text or '식재료' in text or '재료' in text) and any(w in text for w in ['뭐', '무엇', '알려', '있어']) and '추천' not in text
-    alternative = any(w in text for w in ['딴 메뉴', '다른 메뉴', '다른 거', '다른거'])
-    request = alternative or '추천' in text or any(w in compact for w in ['뭐먹', '뭘먹', '무슨요리', '어떤요리', '뭐할까'])
-    # “추천한 카레 먹자”처럼 추천이라는 단어가 있어도 명확한 선택을 우선한다.
+    if re.search(r'추천(?:은|는)?(?:하지마|하지말|해주지마|해주지말|안해|말자)|추천그만|그만추천', compact):
+        clear_state(state)
+        return '추천을 마쳤어요.'
+    names = selection(text, state)
+    choice_phrase = re.search(SELECTION_END, text) or re.search(r'먹지\s*(?:말자|마(?:세요)?)[.!\s]*$', text)
+    if not names and choice_phrase:
+        return CLARIFY
+    alternative = any(w in compact for w in ['딴메뉴', '다른메뉴', '다른거'])
+    request = alternative or bool(re.search(r'추천(?:해|좀|부탁|줘)|추천[.!?]*$', compact)) or any(w in compact for w in ['뭐먹', '뭘먹', '무슨요리', '어떤요리', '뭐할까'])
+    # “재료로 뭐 먹을까?”는 재료 조회 조건에도 맞을 수 있으므로 추천 의도를 우선한다.
+    inventory = not request and ('냉장고' in text or '재료' in text) and any(w in text for w in ['뭐', '무엇', '무슨', '알려', '있어', '있니'])
+    # “추천한 카레 먹자”도 명확한 선택이면 촬영·추천을 건너뛴다.
     if names:
         inventory = request = False
     # 2. 재료 조회: 새 사진을 분석하되 식사 기록과 기존 추천 이벤트는 건드리지 않는다.
