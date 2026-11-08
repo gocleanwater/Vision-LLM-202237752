@@ -143,6 +143,26 @@ python3 -m unittest discover -s '[Project02]/tests' -v
 
 ### 처리 과정
 
+발표 자료 4페이지의 메뉴 추천 동작 흐름을 옮기면 다음과 같다. “오늘 뭐 먹을까?”라는 음성 질문에서 시작한다.
+
+```mermaid
+flowchart LR
+    STT["음성 인식<br/>Whisper STT"] --> YOLO["식재료 탐지<br/>YOLO FP32"]
+    YOLO --> MENU["메뉴 추천<br/>Gemma"]
+    MENU --> CHECK["추천 검사<br/>형식·중복 검사"]
+    CHECK -->|최대 2개만 안내| TTS["음성 안내<br/>Piper TTS"]
+    YOLO -.->|애매한 bbox만| VLM["Gemma VLM<br/>재료 확인"]
+    VLM -.-> MENU
+    HISTORY["최근 3일 기록<br/>오늘·어제·그저께"] -->|기록 메뉴 제외| MENU
+
+    classDef main fill:#faf8f2,stroke:#548447,color:#193e31,stroke-width:2px;
+    classDef auxiliary fill:#e9efe3,stroke:#548447,color:#193e31,stroke-width:2px;
+    class STT,YOLO,MENU,CHECK,TTS main;
+    class VLM,HISTORY auxiliary;
+```
+
+애매한 후보가 없으면 VLM 확인을 건너뛴다. 음성 안내를 재생한 뒤 다시 사용자 말을 듣고, “계란볶음밥 먹자”처럼 메뉴를 선택하면 날짜와 함께 기록한다.
+
 코드는 다음 순서로 연결했다. 실제 장치의 전체 실행은 아직 검증하지 않았다.
 
 1. 마이크에서 말을 연속 감지하고, 사용자가 말한 한 구간을 STT로 텍스트로 바꾼다.
