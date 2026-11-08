@@ -1,4 +1,3 @@
-"""06 노트북의 llama_cpp/Gemma4ChatHandler 호출. 지정한 Python에서 모델 재사용."""
 import base64
 from contextlib import redirect_stdout
 import json
