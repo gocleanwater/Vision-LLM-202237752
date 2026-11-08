@@ -1,14 +1,11 @@
 # Project01처럼 제출에 필요한 파일만 포함한다.
 /*
 !/.gitignore
-!/AGENTS.md
 !/README.md
 !/main.py
 !/vision.py
 !/speech.py
 !/gemma.py
-!/documents/
-!/documents/**
 
 # 편집용 발표자료만 포함하고, 제작 중 이미지·임시 파일은 제외한다.
 !/presentation/
@@ -44,3 +41,7 @@ htmlcov/
 # README에서 재생할 최종 시연 영상만 포함한다.
 !/yolo_demo.mp4
 !/full_demo.mp4
+
+# 설계·작업 문서는 로컬에만 보관한다.
+/documents/
+/document/

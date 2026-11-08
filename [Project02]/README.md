@@ -32,12 +32,10 @@ https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 ├── yolo_demo.mp4      # YOLO 탐지 시연 영상 (10초)
 ├── full_demo.mp4      # 전체 프로그램 시연 영상 (음성 포함)
 ├── .gitignore
-├── README.md
-├── AGENTS.md
-└── documents/        # 기능명세·데이터 계약·검증 기록
+└── README.md
 ```
 
-`tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 기타 모델과 캐시도 제외한다. 최종 `ingredients_fp32.engine`은 프로젝트 루트에 포함한다. 현재 단계의 검증 범위는 [검증 기록](documents/VALIDATION.md)에 정리했다.
+`tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 기타 모델과 캐시도 제외한다. 최종 `ingredients_fp32.engine`은 프로젝트 루트에 포함한다.
 
 최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_fp32.engine`이라는 이름으로 포함한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT FP32로 변환한 파일이다. 2026-11-08 현장에서 클래스 이름 정보를 추가한 엔진을 배치했고 카메라 미리보기로 실행했다.
 
@@ -438,5 +436,3 @@ Piper는 `.piper_venv/bin/python`을 직접 호출한다. Gemma는 메인 프로
 프로젝트의 출발점은 어머니가 매일 가족 식사의 메뉴를 고민하시는 모습을 보고 생각한 아이디어다. 재료 확인 질문 없이 바로 추천하는 방식, 최근 3일간 선택한 메뉴 제외, 메뉴를 최대 두 개와 필요한 추가 재료를 짧게 안내하는 조건을 정했다.
 
 AI는 공개 데이터와 학습 방법을 조사하고, 학습 스크립트·설계 문서·실행 코드와 로컬 테스트를 작성하는 데 활용했다. STT/TTS·Gemma 호출은 06 노트북, 카메라와 엔진 추론은 `int8_yolo.py`를 참고했다. 실제 장치에서 확인한 결과는 이후 별도로 기록한다.
-
-상세한 구현 기준은 [기능명세](documents/FEATURE_SPEC.md), 검증 방향은 [하네스 설계](documents/HARNESS_PLAN.md), 남은 결정은 [결정 기록](documents/OPEN_DECISIONS.md)에서 확인할 수 있다.
