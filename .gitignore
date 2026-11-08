@@ -42,3 +42,6 @@ src/datasets/food_ingredients_v48/label_backups/
 
 # Existing small training seed; Project02 allows its final engine and demo videos
 !src/models/YOLO/yolo11n.pt
+
+# Keep course notebooks
+!/*.ipynb
