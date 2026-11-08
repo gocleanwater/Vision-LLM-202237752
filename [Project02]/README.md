@@ -35,10 +35,6 @@ https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 └── README.md
 ```
 
-`tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 기타 모델과 캐시도 제외한다. 최종 `ingredients_fp32.engine`은 프로젝트 루트에 포함한다.
-
-최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_fp32.engine`이라는 이름으로 포함한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT FP32로 변환한 파일이다. 2026-11-08 현장에서 클래스 이름 정보를 추가한 엔진을 배치했고 카메라 미리보기로 실행했다.
-
 <br>
 
 ## 실행 방식
