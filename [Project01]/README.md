@@ -1,4 +1,11 @@
+
+
+
 # 색깔 순발력 테스트
+
+## 시연 영상
+
+https://github.com/user-attachments/assets/cc26ebef-1728-44cd-9986-173833890266
 
 ## 파일 구조
 
