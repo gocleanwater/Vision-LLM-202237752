@@ -18,7 +18,7 @@
 !/presentation/README.md
 /.presentation-build/
 
-# 테스트·실행 자료·모델은 제출하지 않는다.
+# 테스트·실행 자료·기타 모델은 제출하지 않는다.
 tests/
 runtime/
 recent_meals.json
@@ -37,3 +37,6 @@ htmlcov/
 .venv*/
 .env
 .DS_Store
+
+# 최종 실행에 사용하는 식재료 FP32 엔진은 제출한다.
+!/ingredients_fp32.engine

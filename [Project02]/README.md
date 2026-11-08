@@ -16,15 +16,16 @@
 ├── vision.py         # FP32 YOLO·카메라·애매한 bbox 묶음
 ├── gemma.py          # 별도 Python에서 Gemma VLM·메뉴 생성
 ├── speech.py         # 연속 음성 감지·whisper.cpp·Piper
+├── ingredients_fp32.engine  # 최종 식재료 탐지 모델
 ├── .gitignore
 ├── README.md
 ├── AGENTS.md
 └── documents/        # 기능명세·데이터 계약·검증 기록
 ```
 
-`tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 모델과 캐시도 제외한다. 현재 단계의 검증 범위는 [검증 기록](documents/VALIDATION.md)에 정리했다.
+`tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 기타 모델과 캐시도 제외한다. 최종 `ingredients_fp32.engine`은 프로젝트 루트에 포함한다. 현재 단계의 검증 범위는 [검증 기록](documents/VALIDATION.md)에 정리했다.
 
-최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_fp32.engine`이라는 이름으로 둔다고 가정한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT FP32로 변환한 파일이다. 2026-11-08 현장에서 클래스 이름 정보를 추가한 엔진을 배치했고 카메라 미리보기로 실행했다.
+최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_fp32.engine`이라는 이름으로 포함한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT FP32로 변환한 파일이다. 2026-11-08 현장에서 클래스 이름 정보를 추가한 엔진을 배치했고 카메라 미리보기로 실행했다.
 
 <br>
 
