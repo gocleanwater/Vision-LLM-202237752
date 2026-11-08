@@ -4,7 +4,7 @@
 
 아직 시연 영상은 없다. 실제 Jetson에서 전체 기능을 연결하고 시연한 뒤 추가할 예정이다.
 
-편집용 [PowerPoint 발표자료](presentation/Project02_Ingredients_Menu_Assistant.pptx)는 5장으로, 주제 선정 이유·수업에서 사용한 기술·공개 데이터 사진과 출처·파인튜닝 과정을 담았다. 다른 노트북의 PowerPoint에서 수정할 수 있으며 [편집 안내](presentation/README.md)를 참고한다. 내일 Jetson 작업은 [현장 체크리스트](documents/JETSON_FIELD_CHECKLIST.md) 순서대로 진행한다.
+편집용 [PowerPoint 발표자료](presentation/Project02_Ingredients_Menu_Assistant.pptx)는 6장으로, 주제 선정 이유·수업에서 사용한 기술·공개 데이터 사진과 출처·파인튜닝 과정·기능별 대화 예시를 담았다. 다른 노트북의 PowerPoint에서 수정할 수 있으며 [편집 안내](presentation/README.md)를 참고한다. 내일 Jetson 작업은 [현장 체크리스트](documents/JETSON_FIELD_CHECKLIST.md) 순서대로 진행한다.
 
 ## 파일 구조
 
