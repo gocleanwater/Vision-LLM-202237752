@@ -116,12 +116,12 @@ Piper는 노트북처럼 `.piper_venv/bin/python -m piper`를 별도 프로세�
 
 ```bash
 cd ~/vision-llm/'[Project02]'
-python -u main.py --mic-device plughw:CARD=Microphone,DEV=0
+python main.py
 ```
 
 강의 가상환경을 활성화한 상태에서 실행한다. Gemma는 현재 Python을 사용하므로 같은 환경에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 모델·실행 파일은 `[Project02]`의 상위 폴더를 기준으로 찾으므로 별도 경로 인수를 받지 않는다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
 
-마이크 기본값은 노트북의 `plughw:3,0`이며 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
+마이크 기본값은 현장에서 확인한 USB 마이크 `plughw:CARD=Microphone,DEV=0`이므로 실행 인수 없이 시작한다. 다른 마이크를 연결했을 때만 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
 
 입력은 키나 버튼 없이 연속 감지한다. 노트북의 녹음 형식은 유지하고, 고정 5초 대신 PCM 음량으로 말의 시작·끝을 구분한다. 초기 RMS 기준은 500, 종료 무음 0.8초, 최대 발화 15초다. `--rms-threshold`로 음량 기준을 바꿀 수 있다. 녹음 프로세스는 STT 전에 닫고, 처리·TTS 중에는 열지 않는다. 답변 뒤 자동으로 다시 듣고, 종료는 `Ctrl+C`다. 오디오 프로그램 실패 때는 오류를 표시하고 종료하므로 장치를 확인해 재실행한다.
 

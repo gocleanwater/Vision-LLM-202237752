@@ -387,7 +387,7 @@ def run():
     # ArgumentParser가 터미널의 --mic-device 같은 실행 인수를 args에 담는다.
     # default는 인수를 생략할 때 쓸 시작값이다. 실제 장치에서 조정할 수 있다.
     parser = argparse.ArgumentParser(description='식재료를 보고 음성으로 메뉴를 추천합니다.')
-    parser.add_argument('--mic-device', default='plughw:3,0')
+    parser.add_argument('--mic-device', default='plughw:CARD=Microphone,DEV=0')
     parser.add_argument('--detect-conf', type=float, default=0.15)
     parser.add_argument('--accept-conf', type=float, default=0.65)
     parser.add_argument('--rms-threshold', type=int, default=500)

@@ -70,7 +70,7 @@ cd ~/vision-llm/'[Project02]'
 
 - [ ] USB 카메라가 `/dev/video0`인지, 다른 프로그램이 사용 중인지 확인한다.
 - [ ] OpenCV GStreamer 빌드와 `int8_yolo.py`의 카메라 파이프라인이 동작하는지 확인한다.
-- [ ] `arecord -l`, `aplay -l`로 장치 번호를 확인한다. 기본 `plughw:3,0`이 다르면 `--mic-device`를 바꾼다.
+- [ ] `arecord -l`, `aplay -l`로 장치 번호를 확인한다. 기본 USB 마이크 `plughw:CARD=Microphone,DEV=0`과 다르면 `--mic-device`를 바꾼다.
 - [ ] 한국어 한 발화가 녹음되고 Whisper가 인식하는지 확인한다.
 - [ ] Piper 한국어 합성과 스피커 재생을 확인한다.
 - [ ] RMS 시작값 500, 종료 무음 0.8초, 최대 발화 15초를 실제 환경에서 확인한다. 말이 잘리거나 소음에 시작하면 조정한다.
@@ -90,7 +90,7 @@ cd ~/vision-llm/'[Project02]'
 
 ```bash
 cd ~/vision-llm/'[Project02]'
-python -u main.py --mic-device plughw:CARD=Microphone,DEV=0
+python main.py
 ```
 
 Gemma 환경이나 마이크가 다르면 확인한 값으로 옵션을 추가한다.
