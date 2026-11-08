@@ -2,7 +2,11 @@
 
 ## 시연 영상
 
-아직 시연 영상은 없다. 실제 Jetson에서 전체 기능을 연결하고 시연한 뒤 추가할 예정이다.
+학습한 YOLO11n의 TensorRT FP32 엔진으로 식재료 사진을 탐지한 영상이다. 녹화본의 마지막 10초를 사용했으며, 박스·식재료 이름·confidence를 표시한다.
+
+<video src="https://raw.githubusercontent.com/gocleanwater/Vision-LLM-202237752/main/%5BProject02%5D/yolo_demo.mp4" controls width="640"></video>
+
+[MP4 영상 열기](yolo_demo.mp4)
 
 편집용 [PowerPoint 발표자료](presentation/Project02_Ingredients_Menu_Assistant.pptx)는 6장으로, 주제 선정 이유·수업에서 사용한 기술·공개 데이터 사진과 출처·파인튜닝 과정·기능별 대화 예시를 담았다. 다른 노트북의 PowerPoint에서 수정할 수 있으며 [편집 안내](presentation/README.md)를 참고한다. 내일 Jetson 작업은 [현장 체크리스트](documents/JETSON_FIELD_CHECKLIST.md) 순서대로 진행한다.
 
@@ -17,6 +21,7 @@
 ├── gemma.py          # 별도 Python에서 Gemma VLM·메뉴 생성
 ├── speech.py         # 연속 음성 감지·whisper.cpp·Piper
 ├── ingredients_fp32.engine  # 최종 식재료 탐지 모델
+├── yolo_demo.mp4      # YOLO 탐지 시연 영상 (10초)
 ├── .gitignore
 ├── README.md
 ├── AGENTS.md
