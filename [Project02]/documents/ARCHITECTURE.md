@@ -107,7 +107,7 @@ Mac의 `.venv-ingredients`와 루트 `train_yolo_ingredients.py`는 학습용이
 
 - `main.py`: 의도 분기, 이름·메뉴 검증, KST 날짜와 원자적 식사 기록 저장, 이벤트 상태, 음성 실행 루프.
 - `vision.py`: `int8_yolo.py`의 GStreamer와 YOLO predict를 재사용한다. 모델은 지연 로딩 후 재사용하고 카메라는 매 요청 열어 촬영한 뒤 닫는다. bbox 검증·콜라주·VLM 결과 병합도 담당한다.
-- `gemma.py`: 06 노트북의 Llama·Gemma4ChatHandler·base64 이미지 입력. 지정한 Python에서 JSON 한 줄 요청·응답으로 통신하며 같은 모델을 재사용한다. 기본 Python은 메인 프로그램과 같다. 별도 가상환경은 `--gemma-python`으로 지정한다.
+- `gemma.py`: 06 노트북의 Llama·Gemma4ChatHandler·base64 이미지 입력. 지정한 Python에서 JSON 한 줄 요청과 고정 응답 파일로 통신하며 같은 모델을 재사용한다. 기본 Python은 메인 프로그램과 같다. 별도 가상환경은 `--gemma-python`으로 지정한다.
 - `speech.py`: 06 노트북의 arecord·whisper-cli·Piper·aplay 인수 목록을 재사용한다. 녹음은 raw PCM 음량 기반 발화 구간 감지로 바꿨다. 한 발화 뒤 녹음 전용 프로세스 그룹을 정리하므로 처리·TTS 중 새 입력을 모으지 않는다.
 
 외부 호출 제한은 Whisper/Piper/aplay 각 120초, Gemma 응답 180초, 마이크 데이터 수신 중단 5초다. 마이크가 정상적으로 무음을 계속 보내면 발화 대기는 계속한다. 음성은 최대 15초다. 카메라 읽기·YOLO의 네이티브 호출에는 강제 종료용 별도 프로세스를 두지 않았으며 실제 Jetson에서 멈춤·취소 동작을 확인해야 한다. GPU 메모리와 Gemma `n_ctx=2048`에서 후보 이미지·메뉴 출력이 수용되는지도 미검증이다.

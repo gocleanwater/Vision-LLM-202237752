@@ -1,8 +1,7 @@
 import base64
-from contextlib import redirect_stdout
 import json
+import os
 from pathlib import Path
-import selectors
 import subprocess
 import sys
 import time
@@ -10,8 +9,7 @@ import time
 from vision import INGREDIENT_NAMES
 
 
-# JSON이 Markdown 코드 블록에 들어 있으면 포장만 벗겨 해석한다.
-# 설명문까지 임의로 잘라 맞추지는 않는다. 잘못된 JSON은 예외로 반환한다.
+# 코드 블록으로 감싼 JSON이면 앞뒤 표시만 제거한다.
 def parse_json(content):
     content = content.strip()
     if content.startswith('```'):
@@ -22,81 +20,63 @@ def parse_json(content):
     return json.loads(content)
 
 
-# 메인 프로그램 쪽의 연결 객체다. 실제 모델은 아래 worker 프로세스에서 실행한다.
-# 다른 가상환경을 쓸 수 있고, 같은 모델을 여러 질문에 재사용할 수 있다.
+# 다른 가상환경에서 Gemma를 실행하고, 한 번 올린 모델을 계속 재사용한다.
 class Gemma:
     def __init__(self, resource_root, python=None, timeout=180):
         self.resource_root = Path(resource_root)
-        # venv/bin/python 링크를 풀면 가상환경을 잃을 수 있어 resolve() 대신 absolute()를 쓴다.
-        self.python = str(Path(python).expanduser().absolute()) if python else sys.executable
+        self.python = str(python) if python else sys.executable
         self.timeout = timeout
         self.process = None
-        # 프로세스에서 읽은 바이트가 정확히 JSON 한 줄로 나뉘지 않을 수 있어 버퍼가 필요하다.
-        self.pending = bytearray()
+        self.response_file = Path(__file__).parent / 'runtime/gemma_response.json'
 
-    def __enter__(self):
-        # 첫 이미지 확인/메뉴 요청 때 시작한다. 확실한 재료 조회만 하면 로딩하지 않는다.
-        return self
-
-    # with 블록이 끝나거나 예외가 생겼을 때 자동으로 호출되는 정리 함수다.
-    def __exit__(self, *unused):
-        self.close()
-
-    # 연결과 자신이 만든 프로세스만 정리한다. 다른 학습·모델 프로세스는 건드리지 않는다.
     def close(self):
-        if self.process:
-            from speech import stop_process
-            stop_process(self.process)
-            if self.process.stdin:
-                self.process.stdin.close()
+        if self.process is not None:
+            if self.process.poll() is None:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=3)
+            self.process.stdin.close()
             self.process = None
-        self.pending.clear()
+        self.response_file.unlink(missing_ok=True)
+        Path(str(self.response_file) + '.tmp').unlink(missing_ok=True)
 
-    # 부모 → 자식 stdin으로 JSON 한 줄 전송, 자식 stdout에서 JSON 한 줄 수신.
-    # stdin/stdout을 키보드·화면 대신 두 프로그램을 잇는 통로(PIPE)로 사용한다.
     def request(self, payload):
-        import os
+        self.response_file.parent.mkdir(parents=True, exist_ok=True)
+        # 새 요청이 실패했을 때 지난 답변 파일을 읽지 않도록 먼저 지운다.
+        self.response_file.unlink(missing_ok=True)
         if self.process is None:
-            # 같은 gemma.py를 --worker로 실행하면 아래 worker()가 동작한다.
-            # -u는 Python 출력 버퍼링을 꺼 응답이 즉시 전달되게 한다.
             self.process = subprocess.Popen(
-                [self.python, '-u', str(Path(__file__).resolve()), '--worker', str(self.resource_root)],
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
+                [self.python, '-u', str(Path(__file__)), '--worker',
+                 str(self.resource_root), str(self.response_file)],
+                stdin=subprocess.PIPE, text=True,
             )
         try:
-            # JSON을 UTF-8 바이트로 바꿔 보낸다. 끝의 줄바꿈은 한 요청의 경계다.
-            self.process.stdin.write((json.dumps(payload, ensure_ascii=False) + '\n').encode('utf-8'))
+            self.process.stdin.write(json.dumps(payload, ensure_ascii=False) + '\n')
             self.process.stdin.flush()
-            # 단조 시계는 시스템 날짜가 바뀌어도 경과 시간을 안정적으로 잰다.
-            # 시간을 기록하려는 것이 아니라 응답 제한 시간을 계산하는 용도다.
-            deadline = time.monotonic() + self.timeout
-            with selectors.DefaultSelector() as selector:
-                selector.register(self.process.stdout, selectors.EVENT_READ)
-                # 줄바꿈까지 모이면 JSON 한 줄이 완성된 것이다. 그때까지 필요한 만큼 읽는다.
-                while b'\n' not in self.pending:
-                    remaining = deadline - time.monotonic()
-                    if remaining <= 0 or not selector.select(timeout=remaining):
-                        raise TimeoutError('Gemma 응답 제한 시간 초과')
-                    chunk = os.read(self.process.stdout.fileno(), 65536)
-                    if not chunk:
-                        raise RuntimeError('Gemma 프로세스가 종료됐습니다. 환경·모델 경로를 확인하세요.')
-                    self.pending.extend(chunk)
-                    if len(self.pending) > 1024 * 1024:
-                        raise ValueError('Gemma 응답 크기 초과')
-            # 완성된 첫 줄만 해석하고 뒤에 남은 바이트는 다음 읽기를 위해 보관한다.
-            line, _, remainder = self.pending.partition(b'\n')
-            self.pending = bytearray(remainder)
-            response = json.loads(line)
+            # 모델이 완성한 JSON 파일을 기다린다. 무한히 기다리지는 않는다.
+            start = time.monotonic()
+            while not self.response_file.exists():
+                if self.process.poll() is not None:
+                    raise RuntimeError('Gemma 프로세스가 종료됐습니다. 환경·모델 경로를 확인하세요.')
+                if time.monotonic() - start >= self.timeout:
+                    raise TimeoutError('Gemma 응답 제한 시간 초과')
+                time.sleep(0.05)
+            with self.response_file.open(encoding='utf-8') as stream:
+                response = json.load(stream)
             if 'error' in response:
                 raise RuntimeError(response['error'])
-            # JSON 자체가 잘못되면 호출자는 한 번 수정 요청할 수 있다.
             return parse_json(response['content'])
         except ValueError:
+            # 모델의 JSON 형식만 잘못되면 같은 모델에 보완 요청할 수 있다.
             raise
-        # Ctrl+C도 포함해 통신을 중단하면 모델 프로세스를 정리하고 예외를 다시 전달한다.
         except BaseException:
             self.close()
             raise
+        finally:
+            self.response_file.unlink(missing_ok=True)
 
     # 텍스트 메뉴 생성 요청. 재료·제외 메뉴·보완 지시를 보내며 사진은 보내지 않는다.
     # feedback은 첫 요청에서 비어 있고 검증 실패 후 보완할 때만 채운다.
@@ -142,50 +122,44 @@ class Gemma:
             + json.dumps({'allowed': INGREDIENT_NAMES,
                           'candidates': [{'detection_id': c['detection_id'], 'yolo_guess': c['ingredient_id']} for c in candidates]}, ensure_ascii=False)
         )
-        return self.request({'prompt': prompt, 'image_path': str(image_path.resolve())})
+        return self.request({'prompt': prompt, 'image_path': str(image_path)})
 
 
-# 자식 프로세스의 진입점. 모델을 한 번 로딩한 뒤 요청을 차례로 처리한다.
-def worker(resource_root):
-    # 모델의 출력 로그가 JSON 통신용 stdout에 섞이지 않게 한다.
-    with redirect_stdout(sys.stderr):
-        from llama_cpp import Llama
-        from llama_cpp.llama_chat_format import Gemma4ChatHandler
-        model_path = resource_root / 'src/models/Gemma4/google_gemma-4-E2B-it-Q4_K_M.gguf'
-        mmproj_path = resource_root / 'src/models/Gemma4/mmproj-google_gemma-4-E2B-it-f16.gguf'
-        for path in [model_path, mmproj_path]:
-            if not path.is_file():
-                raise FileNotFoundError(str(path))
-        # mmproj로 이미지 정보를 언어 모델에 연결한다. 06 노트북과 같은 호출 방식이다.
-        chat_handler = Gemma4ChatHandler(clip_model_path=str(mmproj_path))
-        # 노트북의 GPU·컨텍스트·배치 설정을 유지한다. 실제 Jetson 메모리 검증은 별도다.
-        llm = Llama(model_path=str(model_path), chat_handler=chat_handler,
-                    n_gpu_layers=-1, n_ctx=2048, n_batch=32, n_ubatch=32, verbose=False)
-    # 부모가 보낸 한 줄이 한 요청이다. 같은 llm 객체로 반복 처리한다.
+# 06 노트북과 같은 Llama·Gemma4ChatHandler 설정으로 모델을 한 번 올린다.
+def worker(resource_root, response_file):
+    from llama_cpp import Llama
+    from llama_cpp.llama_chat_format import Gemma4ChatHandler
+
+    model_path = resource_root / 'src/models/Gemma4/google_gemma-4-E2B-it-Q4_K_M.gguf'
+    mmproj_path = resource_root / 'src/models/Gemma4/mmproj-google_gemma-4-E2B-it-f16.gguf'
+    chat_handler = Gemma4ChatHandler(clip_model_path=str(mmproj_path))
+    llm = Llama(model_path=str(model_path), chat_handler=chat_handler,
+                n_gpu_layers=-1, n_ctx=2048, n_batch=32, n_ubatch=32, verbose=False)
+
     for line in sys.stdin:
         try:
             request = json.loads(line)
             content = [{'type': 'text', 'text': request['prompt']}]
             if request.get('image_path'):
-                # JPEG 바이트를 base64 문자열로 바꿔 노트북의 image_url 입력 형식으로 넣는다.
                 image_data = 'data:image/jpeg;base64,' + base64.b64encode(Path(request['image_path']).read_bytes()).decode('utf-8')
                 content.append({'type': 'image_url', 'image_url': {'url': image_data}})
-            with redirect_stdout(sys.stderr):
-                result = llm.create_chat_completion(
-                    messages=[{'role': 'system', 'content': '요청한 JSON 형식을 정확히 지키세요.'},
-                              {'role': 'user', 'content': content}],
-                    # JSON 메뉴를 담도록 출력 토큰 한도를 늘리고 무작위성을 낮춘 시작값이다.
-                    max_tokens=600, temperature=0.3,
-                )
+            result = llm.create_chat_completion(
+                messages=[{'role': 'system', 'content': '요청한 JSON 형식을 정확히 지키세요.'},
+                          {'role': 'user', 'content': content}],
+                max_tokens=600, temperature=0.3,
+            )
             response = {'content': result['choices'][0]['message']['content']}
         except Exception as error:
             response = {'error': str(error)}
-        # stdout에는 통신용 JSON만 보낸다. flush=True로 부모가 바로 읽게 한다.
-        print(json.dumps(response, ensure_ascii=False), flush=True)
+        # 작성 중인 파일을 부모가 읽지 않도록, 다 쓴 다음 한 번에 교체한다.
+        temporary = Path(str(response_file) + '.tmp')
+        with temporary.open('w', encoding='utf-8') as stream:
+            json.dump(response, stream, ensure_ascii=False)
+        os.replace(temporary, response_file)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3 and sys.argv[1] == '--worker':
-        worker(Path(sys.argv[2]))
+    if len(sys.argv) == 4 and sys.argv[1] == '--worker':
+        worker(Path(sys.argv[2]), Path(sys.argv[3]))
     else:
         raise SystemExit('main.py를 실행하세요.')

@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 from vision import INGREDIENT_NAMES
 
 # 어느 폴더에서 실행하든 main.py가 있는 폴더를 기준으로 파일을 찾는다.
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).parent
 CLARIFY = '그래서 뭘 드시나요? 알려주세요!'
 NO_MENUS = '추천할 메뉴가 없어요'
 # 사용자에게 익숙한 계란말이·계란볶음밥을 대표 표기로 쓴다. 달걀 표기도 같은 음식으로 비교한다.
@@ -401,28 +401,29 @@ def run():
     runtime = PROJECT_ROOT / 'runtime'
     runtime.mkdir(exist_ok=True)
     state = new_state()
-    # with 블록을 벗어나면 Gemma.__exit__가 자신이 만든 모델 프로세스를 정리한다.
-    with Gemma(args.resource_root, args.gemma_python) as gemma:
+    # 종료하거나 오류가 나도 finally에서 직접 시작한 모델 프로세스를 정리한다.
+    gemma = Gemma(args.resource_root, args.gemma_python)
+    try:
         vision = Vision(PROJECT_ROOT / 'ingredients_int8.engine', runtime,
                         gemma.check_candidates, args.detect_conf, args.accept_conf)
-        try:
-            while True:
-                print('말씀을 시작해 주세요. (종료: Ctrl+C)', flush=True)
-                try:
-                    # 한 발화 녹음을 끝내고 녹음 프로세스를 닫은 뒤 Whisper를 실행한다.
-                    text = speech_to_text(args.resource_root, runtime / 'input.wav', args.mic_device, args.rms_threshold)
-                    print('STT 결과:', text, flush=True)
-                    response = handle_text(text, state, vision.observe, gemma.recommend, PROJECT_ROOT / 'recent_meals.json',
-                                           required_ingredients=gemma.required_ingredients)
-                    if response:
-                        print(response, flush=True)
-                        # 재생이 끝나야 다음 반복에서 다시 녹음한다. 처리·재생 중 새 음성을 모으지 않는다.
-                        text_to_speech(response, args.resource_root, runtime / 'response.wav')
-                except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-                    print('장치 처리 실패:', error, flush=True)
-                    break
-        finally:
-            clear_state(state)
+        while True:
+            print('말씀을 시작해 주세요. (종료: Ctrl+C)', flush=True)
+            try:
+                # 한 발화 녹음을 끝내고 녹음 프로세스를 닫은 뒤 Whisper를 실행한다.
+                text = speech_to_text(args.resource_root, runtime / 'input.wav', args.mic_device, args.rms_threshold)
+                print('STT 결과:', text, flush=True)
+                response = handle_text(text, state, vision.observe, gemma.recommend, PROJECT_ROOT / 'recent_meals.json',
+                                       required_ingredients=gemma.required_ingredients)
+                if response:
+                    print(response, flush=True)
+                    # 재생이 끝나야 다음 반복에서 다시 녹음한다. 처리·재생 중 새 음성을 모으지 않는다.
+                    text_to_speech(response, args.resource_root, runtime / 'response.wav')
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+                print('장치 처리 실패:', error, flush=True)
+                break
+    finally:
+        gemma.close()
+        clear_state(state)
 
 
 # import main으로 불러올 때는 실행하지 않고 python main.py로 실행할 때만 시작한다.
