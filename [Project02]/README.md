@@ -31,6 +31,76 @@
 
 ## 실행 방식
 
+### 별도로 준비할 모델
+
+GitHub에는 직접 학습한 `ingredients_fp32.engine`만 포함한다. Gemma 본체·이미지 입력용 mmproj·Whisper·Piper 모델은 강의 환경의 파일을 사용하고, 없으면 아래 방법으로 준비한다. 이미 같은 파일이 있다면 다시 다운로드할 필요는 없다.
+
+아래 경로는 모두 `~/vision-llm` 기준이다. YOLO 엔진만 `[Project02]` 루트에 두며, 나머지는 노트북과 같은 경로를 사용한다.
+
+| 용도 | 필요한 파일 경로 |
+| --- | --- |
+| 식재료 탐지 | `[Project02]/ingredients_fp32.engine` — 저장소에 포함 |
+| Gemma 본체 | `src/models/Gemma4/google_gemma-4-E2B-it-Q4_K_M.gguf` |
+| Gemma 이미지 입력 | `src/models/Gemma4/mmproj-google_gemma-4-E2B-it-f16.gguf` |
+| Whisper 한국어 음성 인식 | `whisper.cpp/models/ggml-base.bin` |
+| Piper 한국어 음성 합성 | `src/models/Piper/ko_KR-kss-medium.onnx`와 같은 이름의 `.onnx.json` |
+
+**Gemma 본체와 mmproj**
+
+05 노트북의 `hf_hub_download()` 방식을 사용한다. 다운로드 원본은 [bartowski의 Gemma GGUF 저장소](https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/tree/main)이며, 함수 사용법은 [Hugging Face 다운로드 문서](https://huggingface.co/docs/huggingface_hub/guides/download)를 참고한다. 본체와 mmproj 두 파일을 모두 준비해야 사진을 입력할 수 있다.
+
+```bash
+cd ~/vision-llm
+.venv/bin/python - <<'PY'
+import os
+from dotenv import load_dotenv
+from huggingface_hub import hf_hub_download
+
+load_dotenv(".env")
+
+for filename in [
+    "google_gemma-4-E2B-it-Q4_K_M.gguf",
+    "mmproj-google_gemma-4-E2B-it-f16.gguf",
+]:
+    path = hf_hub_download(
+        repo_id="bartowski/google_gemma-4-E2B-it-GGUF",
+        filename=filename,
+        local_dir="src/models/Gemma4",
+        token=os.getenv("HF_TOKEN"),
+    )
+    print(path)
+PY
+```
+
+`huggingface_hub`와 `python-dotenv`는 05 노트북에서 사용한 패키지다. 없는 환경이면 `.venv/bin/python -m pip install huggingface_hub python-dotenv`로 설치한다. 인증이 필요한 경우에는 05 노트북처럼 `~/vision-llm/.env`의 `HF_TOKEN`을 사용한다. 토큰은 코드나 GitHub에 넣지 않는다.
+
+**Whisper base 모델**
+
+06 노트북처럼 [whisper.cpp의 모델 다운로드 스크립트](https://github.com/ggml-org/whisper.cpp/blob/master/models/download-ggml-model.sh)를 실행한다. 한국어 입력이므로 영어 전용 `base.en` 대신 `base`를 받는다.
+
+```bash
+cd ~/vision-llm/whisper.cpp
+sh ./models/download-ggml-model.sh base
+```
+
+파일은 `whisper.cpp/models/ggml-base.bin`에 저장된다. 이 명령은 모델만 받는다. `whisper.cpp`와 실행 파일 `whisper.cpp/build-cpu/bin/whisper-cli`는 06 노트북의 CPU 빌드 절차로 별도 준비해야 한다.
+
+**Piper 한국어 음성 모델**
+
+06 노트북의 다운로드 명령을 Piper 가상환경의 Python으로 실행한다.
+
+```bash
+cd ~/vision-llm
+mkdir -p src/models/Piper
+.piper_venv/bin/python -m piper.download_voices \
+    ko_KR-kss-medium \
+    --data-dir src/models/Piper
+```
+
+음성 모델 `.onnx`와 설정 `.onnx.json`이 함께 필요하다. Piper 환경이 없다면 06 노트북처럼 `python3 -m venv .piper_venv`로 만들고, `.piper_venv/bin/python -m pip install piper-tts`로 설치한 뒤 실행한다.
+
+모델 다운로드는 Gemma 추론용 `llama_cpp` 설치나 Whisper 빌드를 대신하지 않는다. 강의에서 준비한 실행 환경을 사용하며, 기준 폴더가 다르면 실행할 때 `--resource-root /실제/vision-llm/경로`로 지정한다.
+
 ### 실행 환경
 
 최종 프로그램은 Jetson의 `~/vision-llm` 안에 `[Project02]`를 두고 실행하는 것으로 설계했다. 카메라, 마이크, 스피커가 필요하다.
