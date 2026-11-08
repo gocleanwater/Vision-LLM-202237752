@@ -2,6 +2,16 @@
 
 ## 시연 영상
 
+### 전체 프로그램 시연
+
+실제 Jetson에서 식재료 사진을 보여주며 실행한 전체 프로그램 시연이다. 원본의 전체 길이와 음성을 유지하고, 웹에서 재생할 수 있도록 H.264 MP4로 변환했다. 길이는 약 1분 35초다.
+
+https://github.com/user-attachments/assets/cd879d28-ee4c-4f15-a952-8e15c316f06f
+
+[전체 시연 MP4 열기](full_demo.mp4)
+
+### YOLO 식재료 탐지 시연
+
 학습한 YOLO11n의 TensorRT FP32 엔진으로 식재료 사진을 탐지한 영상이다. 녹화본의 마지막 10초를 사용했으며, 박스·식재료 이름·confidence를 표시한다.
 
 https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
@@ -22,6 +32,7 @@ https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 ├── speech.py         # 연속 음성 감지·whisper.cpp·Piper
 ├── ingredients_fp32.engine  # 최종 식재료 탐지 모델
 ├── yolo_demo.mp4      # YOLO 탐지 시연 영상 (10초)
+├── full_demo.mp4      # 전체 프로그램 시연 영상 (음성 포함)
 ├── .gitignore
 ├── README.md
 ├── AGENTS.md

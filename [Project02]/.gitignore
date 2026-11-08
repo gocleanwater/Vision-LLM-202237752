@@ -43,3 +43,4 @@ htmlcov/
 
 # README에서 재생할 최종 시연 영상만 포함한다.
 !/yolo_demo.mp4
+!/full_demo.mp4
