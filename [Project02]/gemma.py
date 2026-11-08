@@ -26,7 +26,7 @@ def parse_json(content):
 # 다른 가상환경을 쓸 수 있고, 같은 모델을 여러 질문에 재사용할 수 있다.
 class Gemma:
     def __init__(self, resource_root, python=None, timeout=180):
-        self.resource_root = Path(resource_root).expanduser().resolve()
+        self.resource_root = Path(resource_root)
         # venv/bin/python 링크를 풀면 가상환경을 잃을 수 있어 resolve() 대신 absolute()를 쓴다.
         self.python = str(Path(python).expanduser().absolute()) if python else sys.executable
         self.timeout = timeout
