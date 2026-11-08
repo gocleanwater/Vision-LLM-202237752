@@ -7,12 +7,14 @@
 !/speech.py
 !/gemma.py
 
-# 편집용 발표자료만 포함하고, 제작 중 이미지·임시 파일은 제외한다.
-!/presentation/
-/presentation/*
-!/presentation/*.pptx
-!/presentation/*.pdf
-!/presentation/README.md
+# 발표 PDF와 README 표지 미리보기를 포함한다.
+!/Project02_presentation.pdf
+!/Project02_cover.png
+!/assets/
+/assets/*
+!/assets/slides/
+/assets/slides/*
+!/assets/slides/page-*.png
 /.presentation-build/
 
 # 테스트·실행 자료·기타 모델은 제출하지 않는다.

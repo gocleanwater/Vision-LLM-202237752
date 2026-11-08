@@ -71,10 +71,15 @@ Vision-LLM-202237752/
 │   ├── ingredients_fp32.engine
 │   ├── full_demo.mp4
 │   ├── yolo_demo.mp4
-│   └── presentation/                # 발표 자료
-│       ├── README.md
-│       ├── Project02_Ingredients_Menu_Assistant.pptx
-│       └── Project02_presentation.pdf
+│   ├── Project02_presentation.pdf     # 발표 자료
+│   ├── Project02_cover.png           # 발표 PDF 표지 미리보기
+│   └── assets/slides/                # 발표 페이지 이미지
+│       ├── page-2.png
+│       ├── page-3.png
+│       ├── page-4.png
+│       ├── page-5.png
+│       ├── page-6.png
+│       └── page-7.png
 ├── yolo/                             # YOLO 추론·FPS 측정
 │   ├── yolo_11_n.py
 │   └── yolo_11_n_fps.py

@@ -1,5 +1,46 @@
 # 식재료 기반 음성 메뉴 추천
 
+## 발표 자료
+
+표지를 클릭하면 발표 PDF를 볼 수 있습니다.
+
+[![식재료 기반 음성 메뉴 추천 발표 자료 표지](Project02_cover.png)](Project02_presentation.pdf)
+
+[발표 PDF 열기](Project02_presentation.pdf)
+
+<details>
+<summary>발표 자료 펼쳐보기 (전체 7페이지)</summary>
+
+### 1페이지
+
+![발표 자료 1페이지 — 표지](Project02_cover.png)
+
+### 2페이지
+
+![발표 자료 2페이지](assets/slides/page-2.png)
+
+### 3페이지
+
+![발표 자료 3페이지](assets/slides/page-3.png)
+
+### 4페이지
+
+![발표 자료 4페이지 — 메뉴 추천 동작 흐름](assets/slides/page-4.png)
+
+### 5페이지
+
+![발표 자료 5페이지](assets/slides/page-5.png)
+
+### 6페이지
+
+![발표 자료 6페이지](assets/slides/page-6.png)
+
+### 7페이지
+
+![발표 자료 7페이지](assets/slides/page-7.png)
+
+</details>
+
 ## 시연 영상
 
 ### 전체 프로그램 시연
@@ -33,9 +74,20 @@ https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 ├── ingredients_fp32.engine  # 최종 식재료 탐지 모델
 ├── yolo_demo.mp4      # YOLO 탐지 시연 영상 (10초)
 ├── full_demo.mp4      # 전체 프로그램 시연 영상 (음성 포함)
+├── Project02_presentation.pdf  # 발표 자료
+├── Project02_cover.png         # 발표 PDF 표지 미리보기
+├── assets/slides/              # README에서 펼쳐 볼 발표 페이지 이미지
+│   ├── page-2.png
+│   ├── page-3.png
+│   ├── page-4.png
+│   ├── page-5.png
+│   ├── page-6.png
+│   └── page-7.png
 ├── .gitignore
 └── README.md
 ```
+
+발표 PDF는 `[Project02]/` 바로 아래에 두었다. 1페이지 미리보기는 `Project02_cover.png`를 사용하고, 2~7페이지 이미지는 `assets/slides/`에 보관한다.
 
 <br>
 
