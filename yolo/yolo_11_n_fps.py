@@ -31,6 +31,7 @@ while True:
 
     results = model.predict(
         source=frame,   # source image
+        quantize=16,    # FP16 reduces CUDA memory use on Jetson
         conf=0.25,      # Confidence Threshold
         iou=0.5,        # IoU Threshold
         verbose=False,  # no output prints

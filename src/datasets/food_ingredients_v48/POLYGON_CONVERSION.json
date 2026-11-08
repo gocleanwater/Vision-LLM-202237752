@@ -1,6 +1,6 @@
 {
   "method": "axis-aligned bounding box enclosing all polygon vertices; normalized YOLO cx cy width height",
-  "backup": "Original labels are available at the source commit in SOURCE.json; additional backup retained in ~/vision-llm on Jetson.",
+  "backup": "/home/jungsoo_ko/vision-llm/src/datasets/food_ingredients_v48/label_backups/20261107T082929Z",
   "files": [
     {
       "file": "train/labels/WhatsApp-Image-2024-03-12-at-4-10-22-PM_jpeg.rf.8430e0d83aff59010ca902ca3783d14b.txt",

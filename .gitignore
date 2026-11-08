@@ -2,12 +2,7 @@
 .env
 
 # Generated datasets and model weights
-src/datasets/MNIST/raw/
-src/datasets/cifar-10-batches-py/
-src/datasets/cifar-10-python.tar.gz
-src/models/CIFAR10/*.pth
-src/models/MNIST/*.pth
-src/models/YOLO/*.pt
+src/**
 
 # Local training environments and generated results
 .venv*/
@@ -17,5 +12,33 @@ runs/
 weights/
 *.cache
 src/datasets/food_ingredients_v48/label_backups/
-# Pretrained seed required for ingredient fine-tuning
+
+# Large local models, dataset archives and original recordings
+*.gguf
+*.safetensors
+*.onnx
+*.engine
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.tflite
+*.task
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.wav
+*.mp3
+*.m4a
+*.mp4
+*.mov
+*.MOV
+*.avi
+*.mkv
+*.webm
+
+# Existing small training seed; Project02 allows its final engine and demo videos
 !src/models/YOLO/yolo11n.pt

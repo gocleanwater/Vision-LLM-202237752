@@ -26,3 +26,5 @@ The following pre-processing was applied to each image:
 * Auto-contrast via contrast stretching
 
 No image augmentation techniques were applied.
+
+
