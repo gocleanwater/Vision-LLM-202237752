@@ -20,7 +20,7 @@ FRAME_BYTES = int(RATE * FRAME_SECONDS) * 2
 
 # 실제 녹음 전에 오디오 명령과 노트북 모델 경로가 있는지 검사한다.
 def check_resources(resource_root):
-    for command in ['pasuspender', 'arecord', 'aplay']:
+    for command in ['pasuspender', 'arecord', 'aplay', 'pactl']:
         if shutil.which(command) is None:
             raise FileNotFoundError('Jetson 오디오 명령이 없습니다: ' + command)
     for relative in ['whisper.cpp/build-cpu/bin/whisper-cli', 'whisper.cpp/models/ggml-base.bin',
@@ -128,6 +128,9 @@ def record_utterance(audio_file, mic_device='plughw:3,0', threshold=500):
             os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=3)
         process.stdout.close()
+        # 녹음 그룹을 종료하면 pasuspender의 일시 중지가 남을 수 있어 재생 장치를 복구한다.
+        subprocess.run(['pactl', 'suspend-sink', '@DEFAULT_SINK@', '0'],
+                       check=True, timeout=5)
     # raw에는 헤더가 없으므로 Whisper가 읽을 수 있는 WAV 헤더를 붙여 저장한다.
     with wave.open(str(audio_file), 'wb') as output:
         output.setnchannels(1)

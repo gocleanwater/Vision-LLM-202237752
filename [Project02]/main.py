@@ -300,7 +300,8 @@ def handle_text(text, state, observe, recommend, history_path, today=None, requi
     alternative = any(w in compact for w in ['딴메뉴', '다른메뉴', '다른거'])
     request = alternative or bool(re.search(r'추천(?:해|좀|부탁|줘)|추천[.!?]*$', compact)) or any(w in compact for w in ['뭐먹', '뭘먹', '무슨요리', '어떤요리', '뭐할까'])
     # “재료로 뭐 먹을까?”는 재료 조회 조건에도 맞을 수 있으므로 추천 의도를 우선한다.
-    inventory = not request and ('냉장고' in text or '재료' in text) and any(w in text for w in ['뭐', '무엇', '무슨', '알려', '있어', '있니'])
+    # 현장 Whisper에서 '식재료'를 '식재로'로 받아 적는 경우도 조회로 처리한다.
+    inventory = not request and ('냉장고' in text or '재료' in text or '식재로' in text) and any(w in text for w in ['뭐', '무엇', '무슨', '알려', '있어', '있니'])
     # “추천한 카레 먹자”도 명확한 선택이면 촬영·추천을 건너뛴다.
     if names:
         inventory = request = False

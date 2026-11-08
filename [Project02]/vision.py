@@ -114,9 +114,11 @@ class Vision:
         try:
             if not cap.isOpened():
                 raise RuntimeError('카메라를 열지 못했습니다.')
-            ret, frame = cap.read()
-            if not ret or frame is None:
-                raise RuntimeError('촬영 실패')
+            # 연결 직후 검은 프레임이 나올 수 있어 약 0.5초 동안 카메라가 준비되게 한다.
+            for _ in range(15):
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    raise RuntimeError('촬영 실패')
         finally:
             # 촬영 성공·실패 모두 카메라를 닫는다. 사진 분석 중에는 카메라를 붙잡지 않는다.
             cap.release()

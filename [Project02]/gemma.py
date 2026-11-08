@@ -81,6 +81,10 @@ class Gemma:
     # 텍스트 메뉴 생성 요청. 재료·제외 메뉴·보완 지시를 보내며 사진은 보내지 않는다.
     # feedback은 첫 요청에서 비어 있고 검증 실패 후 보완할 때만 채운다.
     def recommend(self, available, excluded, feedback):
+        # 한국어 재료명을 ID 자리에 쓰지 않도록 실제 보유 ID로 예시를 만든다.
+        example = {'menus': [{'dish_name': '메뉴명',
+                             'available_ingredients': available[:1],
+                             'additional_ingredients': []}]}
         prompt = (
             '한국어 음식 메뉴를 자유롭게 최대 2개 추천하세요. 요리 방법과 이유는 쓰지 마세요. '
             '같은 음식은 하나만, 제외 메뉴는 공백·계란/달걀 별칭이 달라도 추천하지 마세요. '
@@ -88,9 +92,10 @@ class Gemma:
             '상시 보유 양념은 가정하지 마세요. 필요한 다른 재료는 추가 재료로 명시하세요. '
             '추가 재료는 쉽게 준비할 법한 재료를 적게 제안하세요. 매장 재고·가격은 주장하지 마세요. '
             '보유 재료와 추가 재료를 혼동하지 마세요. 가능한 메뉴가 하나면 하나, 없으면 빈 목록을 반환하세요. '
-            '설명 없이 JSON만 반환하세요. 정확한 형식: '
-            '{"menus":[{"dish_name":"메뉴명","available_ingredients":["영문 보유 ID"],'
-            '"additional_ingredients":["추가로 준비할 재료의 한국어 이름"]}]}.\n'
+            'available_ingredients에는 아래 available의 영어 키만 넣으세요. 한국어 이름을 넣지 마세요. '
+            'dish_name과 additional_ingredients는 한국어로 쓰세요. '
+            '설명 없이 JSON만 반환하세요. 출력 예시: '
+            + json.dumps(example, ensure_ascii=False) + '\n'
             + json.dumps({'available': {k: INGREDIENT_NAMES[k] for k in available},
                           'excluded_dishes': sorted(excluded), 'correction': feedback}, ensure_ascii=False)
         )
