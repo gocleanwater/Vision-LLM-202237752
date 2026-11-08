@@ -14,6 +14,8 @@ https://github.com/user-attachments/assets/cd879d28-ee4c-4f15-a952-8e15c316f06f
 
 학습한 YOLO11n의 TensorRT FP32 엔진으로 식재료 사진을 탐지한 영상이다. 박스·식재료 이름·confidence를 표시한다.
 
+또한, 여기서 보면 알다시피 내가 train한 yolo가 nano 모델이기도 하며 이미지를 가지고 30번만 학습했으며 fp32로 경령화된 모델이기 때문에 계란을 감자라고 하는 등의 인식을 못하는 문제가 있습니다.
+
 https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 
 [MP4 영상 열기](yolo_demo.mp4)
