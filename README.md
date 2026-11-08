@@ -3,11 +3,11 @@
 ## 강의 및 기간 등 세부사항
 
 > **강의명:** &nbsp;&ensp; Physical AI의 Vision-LLM 융합 시청각 멀티모달 시스템<br>
-> **강사:** &nbsp;&nbsp;&emsp; 김규래
-> **기간:** &nbsp;&nbsp;&emsp; 2026/10/10 - 2026/11/8
-> **시간:** &nbsp;&nbsp;&emsp; 토/일 13:00 - 17:30
-> **장소:** &nbsp;&nbsp;&emsp; 경기도 성남시 분당구 대왕판교로606번길 47 2층, 한컴 AX LAB (H 강의장)
-> **연락처:** &nbsp;&ensp; kkr.kyurae.kim<!---->@gmail.com
+> **강사:** &nbsp;&nbsp;&emsp; 김규래<br>
+> **기간:** &nbsp;&nbsp;&emsp; 2026/10/10 - 2026/11/8<br>
+> **시간:** &nbsp;&nbsp;&emsp; 토/일 13:00 - 17:30<br>
+> **장소:** &nbsp;&nbsp;&emsp; 경기도 성남시 분당구 대왕판교로606번길 47 2층, 한컴 AX LAB (H 강의장)<br>
+> **연락처:** &nbsp;&ensp; kkr.kyurae.kim<!---->@gmail.com<br>
 
 ---
 
