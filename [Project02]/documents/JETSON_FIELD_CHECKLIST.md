@@ -62,7 +62,7 @@ cd ~/vision-llm/'[Project02]'
 ../.venv/bin/python -c 'from llama_cpp import Llama; from llama_cpp.llama_chat_format import Gemma4ChatHandler; print("Gemma 환경 확인")'
 ```
 
-- [ ] Gemma import가 실패하면 Gemma가 설치된 Python 경로를 찾아 `--gemma-python`으로 지정한다. 패키지를 무조건 재설치하거나 환경을 합치지 않는다.
+- [ ] 활성화한 강의 가상환경에서 YOLO와 Gemma import가 모두 되는지 확인한다. Gemma는 같은 Python을 사용한다.
 - [ ] Gemma GGUF·mmproj, Whisper 실행 파일·모델, Piper Python·모델·설정 JSON이 노트북 경로에 있는지 확인한다.
 - [ ] 다른 학습·변환 작업과 동시에 모델을 올려 메모리가 부족하지 않은지 확인한다.
 
@@ -90,7 +90,7 @@ cd ~/vision-llm/'[Project02]'
 
 ```bash
 cd ~/vision-llm/'[Project02]'
-../.venv/bin/python main.py --resource-root ~/vision-llm
+python -u main.py --mic-device plughw:CARD=Microphone,DEV=0
 ```
 
 Gemma 환경이나 마이크가 다르면 확인한 값으로 옵션을 추가한다.

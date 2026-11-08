@@ -387,8 +387,6 @@ def run():
     # ArgumentParser가 터미널의 --mic-device 같은 실행 인수를 args에 담는다.
     # default는 인수를 생략할 때 쓸 시작값이다. 실제 장치에서 조정할 수 있다.
     parser = argparse.ArgumentParser(description='식재료를 보고 음성으로 메뉴를 추천합니다.')
-    parser.add_argument('--resource-root', type=Path, default=Path.home() / 'vision-llm', help='노트북 모델·실행 파일이 있는 폴더')
-    parser.add_argument('--gemma-python', type=Path, help='llama_cpp가 설치된 Python (기본: 현재 Python)')
     parser.add_argument('--mic-device', default='plughw:3,0')
     parser.add_argument('--detect-conf', type=float, default=0.15)
     parser.add_argument('--accept-conf', type=float, default=0.65)
@@ -398,12 +396,14 @@ def run():
     from gemma import Gemma
     from speech import speech_to_text, text_to_speech, check_resources
     from vision import Vision
-    check_resources(args.resource_root)
+    # [Project02]를 강의 폴더 안에 두면 상위 폴더의 모델·실행 파일을 그대로 사용한다.
+    resource_root = PROJECT_ROOT.parent
+    check_resources(resource_root)
     runtime = PROJECT_ROOT / 'runtime'
     runtime.mkdir(exist_ok=True)
     state = new_state()
     # 종료하거나 오류가 나도 finally에서 직접 시작한 모델 프로세스를 정리한다.
-    gemma = Gemma(args.resource_root, args.gemma_python)
+    gemma = Gemma(resource_root)
     try:
         vision = Vision(PROJECT_ROOT / 'ingredients_fp32.engine', runtime,
                         gemma.check_candidates, args.detect_conf, args.accept_conf)
@@ -411,14 +411,14 @@ def run():
             print('말씀을 시작해 주세요. (종료: Ctrl+C)', flush=True)
             try:
                 # 한 발화 녹음을 끝내고 녹음 프로세스를 닫은 뒤 Whisper를 실행한다.
-                text = speech_to_text(args.resource_root, runtime / 'input.wav', args.mic_device, args.rms_threshold)
+                text = speech_to_text(resource_root, runtime / 'input.wav', args.mic_device, args.rms_threshold)
                 print('STT 결과:', text, flush=True)
                 response = handle_text(text, state, vision.observe, gemma.recommend, PROJECT_ROOT / 'recent_meals.json',
                                        required_ingredients=gemma.required_ingredients)
                 if response:
                     print(response, flush=True)
                     # 재생이 끝나야 다음 반복에서 다시 녹음한다. 처리·재생 중 새 음성을 모으지 않는다.
-                    text_to_speech(response, args.resource_root, runtime / 'response.wav')
+                    text_to_speech(response, resource_root, runtime / 'response.wav')
             except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                 print('장치 처리 실패:', error, flush=True)
                 break

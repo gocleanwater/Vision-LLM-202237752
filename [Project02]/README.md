@@ -104,7 +104,7 @@ mkdir -p src/models/Piper
 
 음성 모델 `.onnx`와 설정 `.onnx.json`이 함께 필요하다. Piper 환경이 없다면 06 노트북처럼 `python3 -m venv .piper_venv`로 만들고, `.piper_venv/bin/python -m pip install piper-tts`로 설치한 뒤 실행한다.
 
-모델 다운로드는 Gemma 추론용 `llama_cpp` 설치나 Whisper 빌드를 대신하지 않는다. 강의에서 준비한 실행 환경을 사용하며, 기준 폴더가 다르면 실행할 때 `--resource-root /실제/vision-llm/경로`로 지정한다.
+모델 다운로드는 Gemma 추론용 `llama_cpp` 설치나 Whisper 빌드를 대신하지 않는다. 강의에서 준비한 실행 환경을 사용하며, `[Project02]`는 모델과 실행 파일이 있는 강의 폴더 바로 아래에 둔다.
 
 ### 실행 환경
 
@@ -112,14 +112,14 @@ mkdir -p src/models/Piper
 
 YOLO는 식재료를 학습한 YOLO11n의 TensorRT FP32 엔진을 사용한다. Gemma는 이미지도 입력할 수 있는 VLM 구성을 사용하고, 음성 인식에는 whisper.cpp, 음성 합성에는 Piper를 사용한다.
 
-Piper는 노트북처럼 `.piper_venv/bin/python -m piper`를 별도 프로세스로 호출한다. Gemma도 지정한 Python 프로세스에서 모델을 한 번 로딩해 재사용하므로 가상환경을 합칠 필요가 없다. YOLO가 설치된 Python으로 메인 프로그램을 실행한다.
+Piper는 노트북처럼 `.piper_venv/bin/python -m piper`를 별도 프로세스로 호출한다. Gemma는 현재 활성화한 환경의 Python 프로세스에서 모델을 한 번 로딩해 재사용하므로 가상환경을 합칠 필요가 없다. YOLO가 설치된 Python으로 메인 프로그램을 실행한다.
 
 ```bash
 cd ~/vision-llm/'[Project02]'
-../.venv/bin/python main.py --resource-root ~/vision-llm
+python -u main.py --mic-device plughw:CARD=Microphone,DEV=0
 ```
 
-Gemma가 다른 환경에 있으면 `--gemma-python /해당/가상환경/bin/python`을 추가한다. 기본값은 메인 프로그램을 실행한 Python이다. 이 경로에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
+강의 가상환경을 활성화한 상태에서 실행한다. Gemma는 현재 Python을 사용하므로 같은 환경에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 모델·실행 파일은 `[Project02]`의 상위 폴더를 기준으로 찾으므로 별도 경로 인수를 받지 않는다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
 
 마이크 기본값은 노트북의 `plughw:3,0`이며 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
 
@@ -258,7 +258,7 @@ result = subprocess.run(
 
 반면 `subprocess.Popen()`은 프로그램을 실행한 상태에서 데이터를 계속 주고받을 때 사용했다. 녹음에서는 PCM을 조금씩 읽고, Gemma에서는 같은 모델 프로세스에 여러 요청을 보내야 하기 때문이다. Gemma 요청은 `stdin`으로 JSON 한 줄을 보내고, 결과는 `runtime/gemma_response.json` 하나로 받는다. 작성 중인 파일을 읽지 않도록 완성 후 교체하며 요청 전후에 결과를 지운다.
 
-Piper는 `.piper_venv/bin/python`을 직접 호출한다. Gemma도 `--gemma-python`으로 지정한 Python을 호출한다. 따라서 각 가상환경에 있는 패키지를 모두 하나로 합치거나, 코드 안에서 가상환경을 계속 활성화할 필요는 없다.
+Piper는 `.piper_venv/bin/python`을 직접 호출한다. Gemma는 메인 프로그램과 같은 Python을 호출한다. 따라서 각 가상환경에 있는 패키지를 모두 하나로 합치거나, 코드 안에서 가상환경을 계속 활성화할 필요는 없다.
 
 호출 방식은 [Python subprocess 문서](https://docs.python.org/3/library/subprocess.html), 모델 호출은 [Ultralytics 추론 문서](https://docs.ultralytics.com/modes/predict/)와 [llama-cpp-python API 문서](https://llama-cpp-python.readthedocs.io/en/latest/api-reference/)를 참고할 수 있다. 강의의 Gemma 이미지 처리 구성은 노트북과 실제 설치 환경을 함께 확인해야 한다.
 
