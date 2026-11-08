@@ -16,12 +16,12 @@ from vision import INGREDIENT_NAMES
 PROJECT_ROOT = Path(__file__).resolve().parent
 CLARIFY = '그래서 뭘 드시나요? 알려주세요!'
 NO_MENUS = '추천할 메뉴가 없어요'
-# 음식의 서로 다른 표기를 대표 이름으로 연결한다. 계란말이와 달걀말이를 같은 음식으로 비교한다.
-ALIASES = {'계란말이': '달걀말이', '달걀말이': '달걀말이',
-           '계란볶음밥': '달걀볶음밥', '달걀볶음밥': '달걀볶음밥'}
+# 사용자에게 익숙한 계란말이·계란볶음밥을 대표 표기로 쓴다. 달걀 표기도 같은 음식으로 비교한다.
+ALIASES = {'계란말이': '계란말이', '달걀말이': '계란말이',
+           '계란볶음밥': '계란볶음밥', '달걀볶음밥': '계란볶음밥'}
 # 재료의 영어 ID·한국어 이름·별칭을 같은 ID로 연결한다. 음식 별칭과는 별개다.
 INGREDIENT_ALIASES = {**{k: k for k in INGREDIENT_NAMES},
-                      **{v: k for k, v in INGREDIENT_NAMES.items()}, '계란': 'egg'}
+                      **{v: k for k, v in INGREDIENT_NAMES.items()}, '계란': 'egg', '달걀': 'egg'}
 
 # 선택 문장 판정과 동사 제거에 같은 패턴을 사용해 두 규칙이 어긋나지 않게 한다.
 SELECTION_END = r'(?:먹자|먹을게요?|먹을래요?|먹겠습니다|먹기로\s*하자)[.!\s]*$'
@@ -35,6 +35,8 @@ def clean_name(value):
     value = ' '.join(unicodedata.normalize('NFKC', value).split()).strip()
     if not value or len(value) > 100:
         raise ValueError('이름 길이가 올바르지 않습니다.')
+    # 사용자 선호에 따라 계란찜 등 다른 메뉴명에도 익숙한 ‘계란’ 표기를 적용한다.
+    value = value.replace('달걀', '계란')
     return ALIASES.get(value.replace(' ', '').casefold(), value)
 
 
