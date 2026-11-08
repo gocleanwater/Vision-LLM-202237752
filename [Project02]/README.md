@@ -13,7 +13,7 @@
 ```text
 [Project02]/
 ├── main.py           # 음성 의도·추천 규칙·식사 기록·메인 루프
-├── vision.py         # INT8 YOLO·카메라·애매한 bbox 묶음
+├── vision.py         # FP32 YOLO·카메라·애매한 bbox 묶음
 ├── gemma.py          # 별도 Python에서 Gemma VLM·메뉴 생성
 ├── speech.py         # 연속 음성 감지·whisper.cpp·Piper
 ├── .gitignore
@@ -24,7 +24,7 @@
 
 `tests/`는 로컬 검증용이고 Git에서 제외한다. `runtime/`의 현재 사진·음성, `recent_meals.json`, 모델과 캐시도 제외한다. 현재 단계의 검증 범위는 [검증 기록](documents/VALIDATION.md)에 정리했다.
 
-최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_int8.engine`이라는 이름으로 둔다고 가정한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT INT8로 변환한 파일이다. 아직 이 폴더에 실제로 배치한 것은 아니다.
+최종 식재료 탐지 모델은 이 폴더의 루트에 `ingredients_fp32.engine`이라는 이름으로 둔다고 가정한다. 우리가 학습한 `best.pt`를 Jetson에서 TensorRT FP32로 변환한 파일이다. 2026-11-08 현장에서 클래스 이름 정보를 추가한 엔진을 배치했고 카메라 미리보기로 실행했다.
 
 <br>
 
@@ -34,7 +34,7 @@
 
 최종 프로그램은 Jetson의 `~/vision-llm` 안에 `[Project02]`를 두고 실행하는 것으로 설계했다. 카메라, 마이크, 스피커가 필요하다.
 
-YOLO는 식재료를 학습한 YOLO11n의 TensorRT INT8 엔진을 사용한다. Gemma는 이미지도 입력할 수 있는 VLM 구성을 사용하고, 음성 인식에는 whisper.cpp, 음성 합성에는 Piper를 사용한다.
+YOLO는 식재료를 학습한 YOLO11n의 TensorRT FP32 엔진을 사용한다. Gemma는 이미지도 입력할 수 있는 VLM 구성을 사용하고, 음성 인식에는 whisper.cpp, 음성 합성에는 Piper를 사용한다.
 
 Piper는 노트북처럼 `.piper_venv/bin/python -m piper`를 별도 프로세스로 호출한다. Gemma도 지정한 Python 프로세스에서 모델을 한 번 로딩해 재사용하므로 가상환경을 합칠 필요가 없다. YOLO가 설치된 Python으로 메인 프로그램을 실행한다.
 
@@ -45,7 +45,7 @@ cd ~/vision-llm/'[Project02]'
 
 Gemma가 다른 환경에 있으면 `--gemma-python /해당/가상환경/bin/python`을 추가한다. 기본값은 메인 프로그램을 실행한 Python이다. 이 경로에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
 
-마이크 기본값은 노트북의 `plughw:3,0`이며 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_int8.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
+마이크 기본값은 노트북의 `plughw:3,0`이며 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
 
 입력은 키나 버튼 없이 연속 감지한다. 노트북의 녹음 형식은 유지하고, 고정 5초 대신 PCM 음량으로 말의 시작·끝을 구분한다. 초기 RMS 기준은 500, 종료 무음 0.8초, 최대 발화 15초다. `--rms-threshold`로 음량 기준을 바꿀 수 있다. 녹음 프로세스는 STT 전에 닫고, 처리·TTS 중에는 열지 않는다. 답변 뒤 자동으로 다시 듣고, 종료는 `Ctrl+C`다. 오디오 프로그램 실패 때는 오류를 표시하고 종료하므로 장치를 확인해 재실행한다.
 
@@ -293,7 +293,7 @@ Piper는 `.piper_venv/bin/python`을 직접 호출한다. Gemma도 `--gemma-pyth
 
 기능명세에 따라 음성 입출력, YOLO·조건부 VLM 확인, 자유 메뉴 생성, 최근 3일 선택 기록과 이벤트별 중복 제외를 구현했다. 장치 없는 로컬 규칙·오류 처리 테스트를 실행했으며, 실제 Jetson의 모델·음성·카메라 연결 검증은 남아 있다.
 
-식재료 탐지를 위한 YOLO11n은 별도 준비 작업으로 Mac에서 30 epoch 학습을 마쳤다. 최종 실행에는 이 모델을 Jetson에서 INT8로 최적화한 엔진을 사용할 계획이다. 엔진 변환과 Project02 폴더 배치 여부는 실제 결과를 확인한 뒤 기록해야 한다.
+식재료 탐지를 위한 YOLO11n은 별도 준비 작업으로 Mac에서 30 epoch 학습을 마쳤다. 최종 실행에는 TensorRT FP32 엔진을 사용한다. 현장 카메라 비교 후 FP32를 선택했고, 클래스 이름 정보를 붙인 엔진을 Project02에 배치했다. 이 비교는 정량 정확도 평가가 아니며 계란 등 일부 재료의 오인식은 남아 있다.
 
 ### 확장성
 

@@ -405,7 +405,7 @@ def run():
     # 종료하거나 오류가 나도 finally에서 직접 시작한 모델 프로세스를 정리한다.
     gemma = Gemma(args.resource_root, args.gemma_python)
     try:
-        vision = Vision(PROJECT_ROOT / 'ingredients_int8.engine', runtime,
+        vision = Vision(PROJECT_ROOT / 'ingredients_fp32.engine', runtime,
                         gemma.check_candidates, args.detect_conf, args.accept_conf)
         while True:
             print('말씀을 시작해 주세요. (종료: Ctrl+C)', flush=True)

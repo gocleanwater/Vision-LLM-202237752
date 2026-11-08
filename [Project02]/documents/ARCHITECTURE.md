@@ -87,7 +87,7 @@ YOLO는 이름·상자·confidence를 반환하고, 코드는 후보를 나눈�
 
 | 기능 | Jetson의 시작 후보 |
 | --- | --- |
-| YOLO | `~/vision-llm/.venv/bin/python`, Project02 루트의 `ingredients_int8.engine` |
+| YOLO | `~/vision-llm/.venv/bin/python`, Project02 루트의 `ingredients_fp32.engine` |
 | Gemma VLM | `llama_cpp`, `Gemma4ChatHandler`, Gemma GGUF와 해당 mmproj 파일. 현재 환경에서 실제 호출 가능한지 확인 필요 |
 | STT | `~/vision-llm/whisper.cpp/build-cpu/bin/whisper-cli`, `ggml-base.bin` |
 | TTS | `~/vision-llm/.piper_venv/bin/python -m piper`, `ko_KR-kss-medium.onnx` |
@@ -95,9 +95,9 @@ YOLO는 이름·상자·confidence를 반환하고, 코드는 후보를 나눈�
 
 실행 파일·모델·입출력 경로는 설정으로 정한다. `subprocess`에는 인수 목록을 전달한다. 사진·음성은 `runtime/camera.jpg`, `runtime/input.wav`, `runtime/response.wav`를 다음 질문 때 덮어쓰며, 질문별 폴더나 이력을 만들지 않는다. 다른 가상환경의 패키지를 메인 커널에서 직접 import할 필요는 없다.
 
-Mac의 `.venv-ingredients`와 루트 `train_yolo_ingredients.py`는 학습용이다. Mac에서 얻은 `best.pt`를 Jetson으로 옮겨 실제 Jetson에서 식재료 사진으로 calibration하고 TensorRT INT8로 변환한다. 사용자 결정에 따라 FP32·FP16 엔진 생성은 필수 단계에서 제외한다. 양자화 전후 정확도는 `.pt`와 INT8 엔진으로 비교한다.
+Mac의 `.venv-ingredients`와 루트 `train_yolo_ingredients.py`는 학습용이다. Mac에서 얻은 `best.pt`를 Jetson에서 TensorRT 엔진으로 변환했다. 초기 INT8 계획에서 변경하여, 2026-11-08 현장 비교 후 최종 앱은 FP32를 사용한다. 이는 정량 정확도 비교 결과가 아니며 일부 재료 오인식은 남아 있다. FP32에는 INT8 calibration이 필요하지 않다.
 
-완성된 엔진을 `[Project02]/ingredients_int8.engine`에 둔다고 가정한다. 진입점 `main.py`의 위치로 Project02 루트를 계산하고 `PROJECT_ROOT / "ingredients_int8.engine"`을 어댑터에 전달한다. 엔진 파일의 실제 복사·검증이 완료됐다는 뜻은 아니며, 측정용 raw 엔진과 구별한다.
+엔진은 `[Project02]/ingredients_fp32.engine`에 배치했다. 원본 FP32 엔진의 계산 데이터는 보존하고 같은 모델의 36종 클래스 이름 메타데이터를 붙였다. 진입점은 `PROJECT_ROOT / "ingredients_fp32.engine"`을 어댑터에 전달한다. 앱에서 INT8 모델로 자동 전환하지 않는다.
 
 여러 프로세스도 Jetson 메모리를 공유한다. GPU 추론은 우선 순차 실행하며 모델 상주·재로딩 방식은 메모리·지연 측정 후 정한다. 학습·변환 작업은 이 구조 설계와 별개다.
 
@@ -106,7 +106,7 @@ Mac의 `.venv-ingredients`와 루트 `train_yolo_ingredients.py`는 학습용이
 사용자의 간단한 함수 중심 구성 요청에 따라 초안의 contracts/policy/history/pipeline/adapters/config 분할을 네 파일로 합쳤다.
 
 - `main.py`: 의도 분기, 이름·메뉴 검증, KST 날짜와 원자적 식사 기록 저장, 이벤트 상태, 음성 실행 루프.
-- `vision.py`: `int8_yolo.py`의 GStreamer와 YOLO predict를 재사용한다. 모델은 지연 로딩 후 재사용하고 카메라는 매 요청 열고 초기 검은 화면을 피하도록 15프레임을 받은 뒤 촬영하고 닫는다. bbox 검증·콜라주·VLM 결과 병합도 담당한다.
+- `vision.py`: `int8_yolo.py`의 GStreamer와 YOLO predict를 재사용한다. 모델은 지연 로딩 후 재사용하고 카메라는 매 요청 열고 초기 검은 화면·색상 불안정을 피하도록 90프레임을 받은 뒤 촬영하고 닫는다. bbox 검증·콜라주·VLM 결과 병합도 담당한다.
 - `gemma.py`: 06 노트북의 Llama·Gemma4ChatHandler·base64 이미지 입력. 지정한 Python에서 JSON 한 줄 요청과 고정 응답 파일로 통신하며 같은 모델을 재사용한다. 기본 Python은 메인 프로그램과 같다. 별도 가상환경은 `--gemma-python`으로 지정한다.
 - `speech.py`: 06 노트북의 arecord·whisper-cli·Piper·aplay 인수 목록을 재사용한다. 녹음은 raw PCM 음량 기반 발화 구간 감지로 바꿨다. 한 발화 뒤 녹음 전용 프로세스 그룹을 정리하고 `pactl`로 기본 스피커의 일시 중지를 해제한다. 따라서 처리·TTS 중 새 입력을 모으지 않는다.
 

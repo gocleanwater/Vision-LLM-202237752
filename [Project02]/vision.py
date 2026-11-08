@@ -114,8 +114,8 @@ class Vision:
         try:
             if not cap.isOpened():
                 raise RuntimeError('카메라를 열지 못했습니다.')
-            # 연결 직후 검은 프레임이 나올 수 있어 약 0.5초 동안 카메라가 준비되게 한다.
-            for _ in range(15):
+            # 연결 직후 검은 프레임이 나올 수 있어 약 3초 동안 밝기와 색상이 안정되게 한다.
+            for _ in range(90):
                 ret, frame = cap.read()
                 if not ret or frame is None:
                     raise RuntimeError('촬영 실패')
