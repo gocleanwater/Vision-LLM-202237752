@@ -93,11 +93,101 @@ https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 
 ## 실행 방식
 
+아래에서 **프로젝트 루트 디렉토리**는 `[Project02]`, `.venv`, `.piper_venv`, `src`, `whisper.cpp`를 두는 최상위 디렉토리를 뜻한다. 각 명령 블록은 별도 안내가 없으면 해당 디렉토리에서 시작한다.
+
+### Jetson 실행 환경
+
+2026년 11월 8일 SSH로 확인한 환경이다. 모델을 실행할 Jetson의 시스템 CUDA·TensorRT를 사용하며, 필요한 파이썬 패키지를 가상환경에 설치한다.
+
+| 항목 | 확인한 구성 |
+| --- | --- |
+| 장치 | NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super |
+| 운영체제·아키텍처 | Ubuntu 22.04.5 LTS · aarch64 |
+| Jetson Linux L4T | 36.5.2 (`nvidia-l4t-core`: `36.5.2-20260716114719`) |
+| CUDA / TensorRT | CUDA Toolkit 12.6 (`nvcc` 12.6.68) / TensorRT 10.3.0 |
+| Python | 3.10.12 |
+| OpenCV | 4.5.4 · 시스템 패키지 · GStreamer YES (1.19.90) · GTK3 |
+| PyTorch / torchvision | 2.8.0 (CUDA 12.6) / 0.23.0 |
+| Ultralytics | 8.4.194 |
+| llama-cpp-python | 0.3.36 · CUDA GPU 오프로딩 지원 확인 |
+| NumPy / Pillow | 1.23.0 / 10.4.0 |
+| 모델 다운로드 도구 | huggingface-hub 2.4.0 / python-dotenv 1.2.4 |
+| Piper | 별도 `.piper_venv` · Python 3.10.12 · piper-tts 1.8.0 |
+| Whisper | whisper.cpp의 `build-cpu/bin/whisper-cli` · CUDA OFF인 CPU 빌드 |
+
+L4T 버전은 시스템에서 직접 확인한 값이다. `nvidia-jetpack` 메타패키지는 설치되어 있지 않아 JetPack 버전 번호는 별도로 단정하지 않는다. 아래 설치 명령은 노트북과 확인한 패키지 구성을 바탕으로 정리했으며, 새 장치에서 전체 구축을 다시 실행한 것은 아니다.
+
+### 가상환경 구축
+
+**YOLO·Gemma용 `.venv`**
+
+[00 노트북](../lecture_ipynb_files/00_Initial-Setup.ipynb)처럼 시스템 패키지를 참조하는 가상환경을 만든다. CUDA 12.6과 TensorRT가 준비된 Jetson을 전제로 하며, OpenCV와 TensorRT의 Python 바인딩은 시스템 패키지를 사용한다. 이미 `.venv`가 있으면 생성·재설치 단계는 생략하고 활성화한다.
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-dev python3-opencv python3-libnvinfer \
+    python3-matplotlib build-essential cmake git libopenblas-dev libcurl4-openssl-dev \
+    alsa-utils pulseaudio-utils v4l-utils gstreamer1.0-tools gstreamer1.0-plugins-good wget
+python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install "numpy==1.23.0" "Pillow==10.4.0"
+```
+
+[03 노트북](../lecture_ipynb_files/03_DL-and-GPU.ipynb)의 Jetson CUDA 12.6용 패키지 인덱스로 PyTorch와 torchvision을 설치한다. 아래 명령은 해당 Jetson 환경용이며 일반 PC용 PyTorch 설치 명령과 구분한다.
+
+```bash
+source .venv/bin/activate
+python -m pip install --no-deps torch==2.8.0 torchvision==0.23.0 \
+    --index-url https://pypi.jetson-ai-lab.io/jp6/cu126
+python -m pip install "sympy>=1.13.3" "typing_extensions>=4.10.0,<5" \
+    "filelock>=3.16.1,<4" "networkx>=2.5.1" jinja2 fsspec
+python -m pip install pyyaml requests psutil
+python -m pip install --no-deps ultralytics==8.4.194
+python -m pip install huggingface_hub==2.4.0 python-dotenv==1.2.4
+```
+
+Ultralytics의 `--no-deps`는 [04 노트북](../lecture_ipynb_files/04_DL-Object-Detection.ipynb)의 방식이다. 시스템의 GStreamer 지원 OpenCV와 Jetson용 PyTorch를 유지하기 위한 구성이며, Ultralytics가 선언한 전체 의존성 목록을 자동 설치하는 방식은 아니다. 모델 학습·ONNX 변환용 패키지는 완성된 엔진을 실행하는 데 필요하지 않아 제외했다.
+
+[05 노트북](../lecture_ipynb_files/05-LLM_and_Gemma.ipynb)의 CUDA 빌드 방식으로 Gemma 실행에 필요한 `llama-cpp-python`을 설치한다. Orin의 CUDA 아키텍처 87을 지정하고, 빌드 병렬 수는 2로 제한한다.
+
+```bash
+source .venv/bin/activate
+export PATH=/usr/local/cuda-12.6/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:${LD_LIBRARY_PATH:-}
+CUDACXX=/usr/local/cuda-12.6/bin/nvcc \
+CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.6/bin/nvcc -DCMAKE_CUDA_ARCHITECTURES=87" \
+CMAKE_BUILD_PARALLEL_LEVEL=2 \
+python -m pip install --no-cache-dir --no-binary=llama-cpp-python "llama-cpp-python==0.3.36"
+```
+
+**Piper용 `.piper_venv`**
+
+[06 노트북](../lecture_ipynb_files/06-Vision_LLM_Multimodal_Systems.ipynb)의 별도 음성 합성 환경을 준비한다. 프로그램이 이 환경의 Python을 직접 호출하므로 메인 환경과 합칠 필요가 없다.
+
+```bash
+python3 -m venv .piper_venv
+.piper_venv/bin/python -m pip install piper-tts==1.8.0
+```
+
+**Whisper CPU 실행 파일 빌드**
+
+06 노트북의 `build-cpu` 경로를 사용한다. 코드가 CPU 실행 파일을 호출하므로 CUDA용 Whisper 빌드는 필요하지 않다. `whisper.cpp`가 이미 있다면 clone은 생략한다.
+
+```bash
+git clone https://github.com/ggml-org/whisper.cpp.git
+cmake -S whisper.cpp -B whisper.cpp/build-cpu \
+    -DGGML_CUDA=OFF -DGGML_BLAS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build whisper.cpp/build-cpu --target whisper-cli -j2 --config Release
+```
+
+확인한 장치의 whisper.cpp 커밋은 `727d3e7666485e12450746b523bfb4e7f057cc5e`다. 위 clone은 현재 저장소를 받는 명령이며, 같은 소스 버전으로 재현하려면 새로 받은 저장소에서 빌드 전에 `git -C whisper.cpp checkout 727d3e7666485e12450746b523bfb4e7f057cc5e`를 실행한다.
+
 ### 별도로 준비할 모델
 
 GitHub에는 직접 학습한 `ingredients_fp32.engine`만 포함한다. Gemma 본체·이미지 입력용 mmproj·Whisper·Piper 모델은 강의 환경의 파일을 사용하고, 없으면 아래 방법으로 준비한다. 이미 같은 파일이 있다면 다시 다운로드할 필요는 없다.
 
-아래 경로는 모두 `~/vision-llm` 기준이다. YOLO 엔진만 `[Project02]` 루트에 두며, 나머지는 노트북과 같은 경로를 사용한다.
+아래 경로는 모두 프로젝트 루트 디렉토리 기준이다. YOLO 엔진만 `[Project02]` 폴더에 두며, 나머지는 노트북과 같은 상대 경로를 사용한다.
 
 | 용도                     | 필요한 파일 경로                                                    |
 | ------------------------ | ------------------------------------------------------------------- |
@@ -112,7 +202,7 @@ GitHub에는 직접 학습한 `ingredients_fp32.engine`만 포함한다. Gemma �
 05 노트북의 `hf_hub_download()` 방식을 사용한다. 다운로드 원본은 [bartowski의 Gemma GGUF 저장소](https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/tree/main)이며, 함수 사용법은 [Hugging Face 다운로드 문서](https://huggingface.co/docs/huggingface_hub/guides/download)를 참고한다. 본체와 mmproj 두 파일을 모두 준비해야 사진을 입력할 수 있다.
 
 ```bash
-cd ~/vision-llm
+# 프로젝트 루트 디렉토리에서 실행
 .venv/bin/python - <<'PY'
 import os
 from dotenv import load_dotenv
@@ -134,51 +224,76 @@ for filename in [
 PY
 ```
 
-`huggingface_hub`와 `python-dotenv`는 05 노트북에서 사용한 패키지다. 없는 환경이면 `.venv/bin/python -m pip install huggingface_hub python-dotenv`로 설치한다. 인증이 필요한 경우에는 05 노트북처럼 `~/vision-llm/.env`의 `HF_TOKEN`을 사용한다. 토큰은 코드나 GitHub에 넣지 않는다.
+`huggingface_hub`와 `python-dotenv`는 위 가상환경 구축 단계에서 설치한다. 인증이 필요한 경우에는 05 노트북처럼 프로젝트 루트 디렉토리의 `.env`에 설정한 `HF_TOKEN`을 사용한다. 토큰은 코드나 GitHub에 넣지 않는다.
 
 **Whisper base 모델**
 
 06 노트북처럼 [whisper.cpp의 모델 다운로드 스크립트](https://github.com/ggml-org/whisper.cpp/blob/master/models/download-ggml-model.sh)를 실행한다. 한국어 입력이므로 영어 전용 `base.en` 대신 `base`를 받는다.
 
 ```bash
-cd ~/vision-llm/whisper.cpp
-sh ./models/download-ggml-model.sh base
+# 프로젝트 루트 디렉토리에서 실행
+(cd whisper.cpp && sh ./models/download-ggml-model.sh base)
 ```
 
-파일은 `whisper.cpp/models/ggml-base.bin`에 저장된다. 이 명령은 모델만 받는다. `whisper.cpp`와 실행 파일 `whisper.cpp/build-cpu/bin/whisper-cli`는 06 노트북의 CPU 빌드 절차로 별도 준비해야 한다.
+파일은 `whisper.cpp/models/ggml-base.bin`에 저장된다. 이 명령은 모델만 받으며, 실행 파일은 위 CPU 빌드 단계에서 준비한다.
 
 **Piper 한국어 음성 모델**
 
 06 노트북의 다운로드 명령을 Piper 가상환경의 Python으로 실행한다.
 
 ```bash
-cd ~/vision-llm
+# 프로젝트 루트 디렉토리에서 실행
 mkdir -p src/models/Piper
 .piper_venv/bin/python -m piper.download_voices \
     ko_KR-kss-medium \
     --data-dir src/models/Piper
 ```
 
-음성 모델 `.onnx`와 설정 `.onnx.json`이 함께 필요하다. Piper 환경이 없다면 06 노트북처럼 `python3 -m venv .piper_venv`로 만들고, `.piper_venv/bin/python -m pip install piper-tts`로 설치한 뒤 실행한다.
+음성 모델 `.onnx`와 설정 `.onnx.json`이 함께 필요하다. Piper 환경은 위 별도 가상환경 구축 단계에서 준비한다.
 
-모델 다운로드는 Gemma 추론용 `llama_cpp` 설치나 Whisper 빌드를 대신하지 않는다. 강의에서 준비한 실행 환경을 사용하며, `[Project02]`는 모델과 실행 파일이 있는 강의 폴더 바로 아래에 둔다.
+준비가 끝난 폴더 구조는 다음과 같다. 모델 다운로드와 실행 환경 구축을 모두 완료해야 한다.
+
+```text
+프로젝트 루트 디렉토리/
+├── .venv/
+├── .piper_venv/
+├── .env                         # 인증이 필요한 경우에만 준비
+├── src/models/
+│   ├── Gemma4/                  # Gemma 본체와 mmproj
+│   └── Piper/                   # 한국어 .onnx와 .onnx.json
+├── whisper.cpp/
+│   ├── build-cpu/bin/whisper-cli
+│   └── models/ggml-base.bin
+└── [Project02]/
+    ├── main.py
+    ├── vision.py
+    ├── gemma.py
+    ├── speech.py
+    └── ingredients_fp32.engine
+```
+
+완성된 TensorRT 엔진은 다른 GPU·TensorRT 버전에서 그대로 호환된다고 보장할 수 없다. 위 환경과 다른 장치에서는 엔진 호환성을 확인하고, 로딩에 실패하면 대상 환경에서 원본 가중치로 엔진을 다시 만들어야 한다.
 
 ### 실행 환경
 
-최종 프로그램은 Jetson의 `~/vision-llm` 안에 `[Project02]`를 두고 실행하는 것으로 설계했다. 카메라, 마이크, 스피커가 필요하다.
+프로젝트 루트 디렉토리 안에 `[Project02]`를 두고 실행한다. 카메라, 마이크, 스피커가 필요하다.
 
 YOLO는 식재료를 학습한 YOLO11n의 TensorRT FP32 엔진을 사용한다. Gemma는 이미지도 입력할 수 있는 VLM 구성을 사용하고, 음성 인식에는 whisper.cpp, 음성 합성에는 Piper를 사용한다.
 
 Piper는 노트북처럼 `.piper_venv/bin/python -m piper`를 별도 프로세스로 호출한다. Gemma는 현재 활성화한 환경의 Python 프로세스에서 모델을 한 번 로딩해 재사용하므로 가상환경을 합칠 필요가 없다. YOLO가 설치된 Python으로 메인 프로그램을 실행한다.
 
 ```bash
-cd ~/vision-llm/'[Project02]'
+# 프로젝트 루트 디렉토리에서 실행
+source .venv/bin/activate
+export PATH=/usr/local/cuda-12.6/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:${LD_LIBRARY_PATH:-}
+cd '[Project02]'
 python main.py
 ```
 
-강의 가상환경을 활성화한 상태에서 실행한다. Gemma는 현재 Python을 사용하므로 같은 환경에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 모델·실행 파일은 `[Project02]`의 상위 폴더를 기준으로 찾으므로 별도 경로 인수를 받지 않는다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
+위 가상환경을 활성화한 상태에서 실행한다. Gemma는 현재 Python을 사용하므로 같은 환경에 `llama_cpp`와 노트북의 `Gemma4ChatHandler`가 있어야 한다. 모델·실행 파일은 `[Project02]`의 상위 폴더를 기준으로 찾으므로 별도 경로 인수를 받지 않는다. 필요한 Gemma·Whisper·Piper 모델 경로는 `gemma.py`, `speech.py`에 노트북 경로로 지정했다. 새 모델이나 패키지를 자동으로 다운로드하지 않는다.
 
-마이크 기본값은 현장에서 확인한 USB 마이크 `plughw:CARD=Microphone,DEV=0`이므로 실행 인수 없이 시작한다. 다른 마이크를 연결했을 때만 `--mic-device`로 바꾼다. 카메라는 `int8_yolo.py`와 같은 `/dev/video0` GStreamer 파이프라인이다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
+마이크 기본값은 `plughw:CARD=Microphone,DEV=0`이다. 연결한 장치 이름이 다르면 `--mic-device`로 바꾼다. 카메라는 `vision.py`의 `/dev/video0` GStreamer 파이프라인을 사용한다. 해당 Jetson의 OpenCV에서 GStreamer가 동작해야 한다. 실행 전 최종 엔진을 이 폴더의 `ingredients_fp32.engine`에 둬야 하며, 모델이 없으면 오류로 중단한다.
 
 입력은 키나 버튼 없이 연속 감지한다. 노트북의 녹음 형식은 유지하고, 고정 5초 대신 PCM 음량으로 말의 시작·끝을 구분한다. 초기 RMS 기준은 500, 종료 무음 0.8초, 최대 발화 15초다. `--rms-threshold`로 음량 기준을 바꿀 수 있다. 녹음 프로세스는 STT 전에 닫고, 처리·TTS 중에는 열지 않는다. 답변 뒤 자동으로 다시 듣고, 종료는 `Ctrl+C`다. 오디오 프로그램 실패 때는 오류를 표시하고 종료하므로 장치를 확인해 재실행한다.
 
@@ -192,6 +307,82 @@ python3 -m unittest discover -s '[Project02]/tests' -v
 ```
 
 테스트 명령은 로컬 `tests/`가 있는 개발 폴더 기준이다. 테스트 파일은 요청에 따라 Git에 포함하지 않으므로 새 clone에는 없다.
+
+### 카메라·마이크·스피커 설정
+
+| 장치 | 코드의 설정 | 변경 위치 |
+| --- | --- | --- |
+| USB 카메라 | `/dev/video0` · YUY2 · 640 × 480 · 30 FPS 요청 · BGR 변환 | `vision.py`의 GStreamer `pipeline` |
+| USB 마이크 | `plughw:CARD=Microphone,DEV=0` · 16 kHz · 16비트 PCM · 모노 | 실행 인수 `--mic-device` |
+| 발화 감지 | RMS 500 · 종료 무음 0.8초 · 최대 15초 | RMS는 `--rms-threshold`, 나머지는 `speech.py` |
+| 스피커 | `aplay`의 기본 ALSA 출력 장치 | OS의 기본 오디오 출력 설정 |
+
+카메라는 관측할 때 열어 90프레임을 읽은 뒤 닫고 마지막 프레임을 분석한다. 30 FPS 요청 기준으로 약 3초 동안 안정화하려는 처리이며, 실제 촬영·분석 속도를 측정한 값은 아니다.
+
+먼저 장치를 연결하고 이름과 지원 형식을 확인한다.
+
+```bash
+v4l2-ctl --list-devices
+v4l2-ctl --device=/dev/video0 --list-formats-ext
+arecord -l
+arecord -L
+aplay -l
+aplay -L
+pactl list short sinks
+pactl get-default-sink
+pactl get-sink-volume @DEFAULT_SINK@
+```
+
+마이크의 ALSA 카드 이름이 `Microphone`인지 확인한다. 카드 번호는 재연결 시 바뀔 수 있어 코드의 기본값처럼 이름을 사용한다. 다른 이름이면 `[Project02]` 폴더에서 `python main.py --mic-device 'plughw:CARD=실제_카드_이름,DEV=0'`으로 실행한다.
+
+스피커는 데스크톱의 소리 설정에서 연결한 출력 장치를 선택한다. PulseAudio를 기본 출력으로 사용하는 환경이라면 아래 명령으로도 설정할 수 있다. 첫 줄의 이름은 `pactl list short sinks`에서 확인한 실제 이름으로 바꾼다. 프로그램은 `aplay`를 쓰므로 ALSA 기본 출력도 해당 장치로 연결되어 있어야 한다.
+
+```bash
+pactl set-default-sink '실제_출력_장치_이름'
+pactl set-sink-mute @DEFAULT_SINK@ 0
+pactl set-sink-volume @DEFAULT_SINK@ 50%
+```
+
+장치를 직접 확인할 때는 다음처럼 3초 녹음 후 재생할 수 있다. 이 명령은 실행한 디렉토리에 `mic_test.wav`를 만든다. 코드와 같은 `pasuspender` 방식으로 녹음하므로 동일 사용자로 실행하고, 실제로 소리가 들리는지 확인한다.
+
+```bash
+pasuspender -- arecord -D 'plughw:CARD=Microphone,DEV=0' \
+    -f S16_LE -r 16000 -c 1 -d 3 mic_test.wav
+aplay mic_test.wav
+```
+
+2026년 11월 8일 SSH 점검 당시에는 USB 카메라와 `Microphone` 카드가 연결되어 있지 않았다. 기본 출력도 USB 스피커가 아닌 내장 오디오로 잡혀 있어, 이번 점검에서 실제 촬영·녹음·청취를 검증하지는 않았다. 장치 연결 후 위 설정을 확인해야 한다.
+
+### 실행 전 환경 확인
+
+프로젝트 루트 디렉토리에서 실행한다. 패키지 버전뿐 아니라 CUDA 지원, Gemma 이미지 입력 핸들러, 오디오 실행 파일을 확인한다.
+
+```bash
+source .venv/bin/activate
+python - <<'PY'
+import cv2
+import torch
+import torchvision
+import tensorrt
+import llama_cpp
+from ultralytics import YOLO
+from llama_cpp.llama_chat_format import Gemma4ChatHandler
+
+print("OpenCV:", cv2.__version__)
+for line in cv2.getBuildInformation().splitlines():
+    if "GStreamer:" in line:
+        print(line.strip())
+print("PyTorch:", torch.__version__, "CUDA:", torch.version.cuda)
+print("CUDA 사용 가능:", torch.cuda.is_available())
+print("TensorRT:", tensorrt.__version__)
+print("Gemma GPU 지원:", llama_cpp.llama_supports_gpu_offload())
+print("YOLO·torchvision·Gemma4ChatHandler 임포트 완료")
+PY
+.piper_venv/bin/python -m piper --help
+whisper.cpp/build-cpu/bin/whisper-cli --help
+```
+
+현재 Jetson에서 YOLO·torchvision·TensorRT·Gemma4ChatHandler 임포트, CUDA 사용 가능 여부, Gemma GPU 지원, Piper·Whisper 도움말 실행과 필요한 모델 파일의 존재를 확인했다. 모델 파일의 존재 확인은 전체 추론 성공을 뜻하지 않으며, 새 가상환경 구축과 장치를 연결한 전체 실행은 별도 검증이 필요하다.
 
 ### 처리 과정
 

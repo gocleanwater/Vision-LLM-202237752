@@ -35,16 +35,114 @@ Project01/
 
 ## 실행 방식
 
-### 실행 환경
+아래에서 **프로젝트 루트 디렉토리**는 `[Project01]`, `.venv`, `src` 폴더를 두는 최상위 디렉토리를 뜻한다. 터미널에서 해당 디렉토리로 이동한 상태를 기준으로 명령을 실행한다.
 
-Jetson에서 강사님께서 주신 파이썬 가상환경(`.venv`)가 설치된 `~/vision-llm` 디렉토리에서 실행해야 한다. 아니면, 강사님의 해당 가상환경을 준비하고 실행해야 한다. 또한, 가천대학교에서 제공하는 USB카메라를 사용해야 한다. 모델은 뭔지 모르겠다...
+### 가상환경 구축
+
+[00_Initial-Setup.ipynb](../lecture_ipynb_files/00_Initial-Setup.ipynb)의 `--system-site-packages` 방식으로 가상환경을 만들고, [02_Computer-Vision.ipynb](../lecture_ipynb_files/02_Computer-Vision.ipynb)의 MediaPipe 설치 방식을 사용한다. 아래는 Project01에 필요한 구성만 정리한 것이다. 이미 준비된 `.venv`가 있다면 다시 만들지 않고 `source .venv/bin/activate`로 활성화한다.
+
+프로젝트 루트 디렉토리에서 실행한다.
 
 ```bash
-cd ~/vision-llm/'[Project01]'
-../.venv/bin/python main.py
+sudo apt update
+sudo apt install -y python3-venv python3-opencv python3-matplotlib libportaudio2 \
+    v4l-utils gstreamer1.0-tools gstreamer1.0-plugins-good wget
+python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+
+python -m pip install "numpy==1.23.0" "Pillow==10.4.0"
+python -m pip install --no-deps "mediapipe==1.1.1"
+python -m pip install "absl-py==2.5.1" "flatbuffers==25.12.19" "sounddevice==0.5.6" "certifi==2026.7.22"
+```
+
+MediaPipe를 `--no-deps`로 설치하는 것은 노트북의 방식이다. 카메라 입력에 필요한 GStreamer 지원을 유지하도록 OpenCV는 시스템 패키지를 사용하고, 가상환경에서 이를 참조한다. `matplotlib`, `certifi`, `sounddevice`도 MediaPipe의 의존성이다. `sounddevice`와 PortAudio는 게임에 음성 기능을 추가하기 위한 설치가 아니다.
+
+2026년 11월 8일 SSH로 확인한 Jetson 환경은 다음과 같다. 아래 패키지 버전은 해당 장치에서 확인한 값이며, 새 가상환경을 만들어 설치하는 과정 전체를 다시 검증한 것은 아니다.
+
+| 항목 | 확인한 구성 |
+| --- | --- |
+| 장치 | NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super |
+| 운영체제·아키텍처 | Ubuntu 22.04.5 LTS · aarch64 |
+| Jetson Linux L4T | 36.5.2 (`nvidia-l4t-core`: `36.5.2-20260716114719`) |
+| Python | 3.10.12 |
+| 가상환경 | `include-system-site-packages = true` |
+| OpenCV | 4.5.4 · 시스템 패키지 사용 · GStreamer YES (1.19.90) · GTK3 |
+| NumPy / Pillow | 1.23.0 / 10.4.0 |
+| MediaPipe | 1.1.1 |
+| MediaPipe 관련 의존성 | absl-py 2.5.1 · flatbuffers 25.12.19 · sounddevice 0.5.6 · certifi 2026.7.22 · matplotlib 3.5.1 (시스템 패키지) |
+
+이 구성에서 OpenCV·NumPy·MediaPipe·Pillow 임포트와 `HandLandmarker` 생성까지 확인했다. USB 카메라와 화면 출력은 아래 실행 명령으로 장치에서 확인해야 한다.
+
+### 모델 준비
+
+손 검출에는 [02_Computer-Vision.ipynb](../lecture_ipynb_files/02_Computer-Vision.ipynb)의 MediaPipe 실습에서 사용한 **Hand Landmarker** 모델을 사용한다. `vision.py`는 이 모델로 최대 두 손의 랜드마크와 왼손·오른손 분류 결과를 얻는다.
+
+| 용도 | 필요한 파일 | 저장 위치 (프로젝트 루트 디렉토리 기준) |
+| --- | --- | --- |
+| 양손 검출 | `hand_landmarker.task` | `src/models/MediaPipe/hand_landmarker.task` |
+
+노트북의 다운로드 명령을 따라 다음과 같이 준비한다. 이미 같은 모델 파일이 있다면 다시 다운로드하지 않아도 된다.
+
+```bash
+# 프로젝트 루트 디렉토리에서 실행
+mkdir -p src/models/MediaPipe
+wget https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task \
+    -O src/models/MediaPipe/hand_landmarker.task
+```
+
+프로젝트와 모델은 다음 위치에 둔다.
+
+```text
+프로젝트 루트 디렉토리/
+├── .venv/
+├── src/models/MediaPipe/
+│   └── hand_landmarker.task
+└── [Project01]/
+    ├── main.py
+    ├── vision.py
+    └── ...
+```
+
+`vision.py`의 모델 경로는 `../src/models/MediaPipe/hand_landmarker.task`이며 실행 디렉토리를 기준으로 찾는다. 따라서 아래 실행 명령처럼 `[Project01]` 폴더로 이동한 뒤 실행해야 한다. 모델은 프로그램에서 자동으로 다운로드하지 않는다.
+
+공 검출은 LAB 색상 마스크와 모폴로지 연산을 사용하므로 별도의 학습 모델이 필요하지 않다. 같은 노트북에서 함께 다운로드하는 `pose_landmarker_full.task`는 이 프로젝트에서 사용하지 않는다. 한글 표시에 필요한 폰트는 저장소의 `assets/fonts/`에 포함되어 있다.
+
+### 실행 환경
+
+Jetson의 프로젝트 루트 디렉토리에 위 가상환경과 모델을 준비하고, 가천대학교에서 제공하는 USB 카메라를 연결한다.
+
+USB 카메라는 `main.py`의 `/dev/video0` GStreamer 파이프라인으로 열기 때문에, OpenCV에서 GStreamer와 화면 출력 기능을 사용할 수 있어야 한다. Jetson의 화면이 연결된 그래픽 세션에서 실행한다.
+
+```bash
+# 프로젝트 루트 디렉토리에서 실행
+source .venv/bin/activate
+cd '[Project01]'
+python main.py
 ```
 
 게임 창에서 `q`를 누르면 종료된다. 프로그램을 다시 실행하려면 같은 명령을 입력하면 된다.
+
+### 카메라·화면 설정
+
+| 항목 | 코드의 설정 |
+| --- | --- |
+| USB 카메라 | `/dev/video0` |
+| 입력 형식 | YUY2 · 640 × 480 · 30 FPS 요청 |
+| 영상 변환 | GStreamer에서 BGR 변환 후, 프로그램에서 반시계 방향 90도 회전 |
+| 화면 출력 | OpenCV 창과 한글 폰트 사용 · 그래픽 세션 필요 |
+| 손의 좌우 구분 | `main.py`의 `HAND_MAPPING` · 화면 위치가 아니라 실제 왼손·오른손 기준 |
+
+USB 카메라를 연결한 뒤 다음 명령으로 장치와 지원 형식을 확인한다. 30 FPS는 코드에서 요청하는 값이며 실제 처리 속도를 뜻하지 않는다.
+
+```bash
+v4l2-ctl --list-devices
+v4l2-ctl --device=/dev/video0 --list-formats-ext
+gst-inspect-1.0 v4l2src
+gst-inspect-1.0 videoconvert
+gst-inspect-1.0 appsink
+```
+
+카메라 번호나 지원 형식이 다르면 `main.py`의 `CAMERA_PIPELINE`을 장치에 맞춰 바꾼다. 회전한 화면에서 영역 좌표 `REGIONS`와 `HAND_MAPPING`도 확인한다. SSH 터미널만으로는 게임 창이 표시되지 않을 수 있으므로 Jetson의 데스크톱 터미널에서 실행한다. 2026년 11월 8일 SSH 점검 당시에는 `/dev/video0` 장치가 없어 실제 촬영·화면 출력은 재검증하지 않았다.
 
 ### 처리 과정
 
