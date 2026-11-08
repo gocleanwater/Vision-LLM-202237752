@@ -4,7 +4,7 @@
 
 학습한 YOLO11n의 TensorRT FP32 엔진으로 식재료 사진을 탐지한 영상이다. 녹화본의 마지막 10초를 사용했으며, 박스·식재료 이름·confidence를 표시한다.
 
-<video src="https://raw.githubusercontent.com/gocleanwater/Vision-LLM-202237752/main/%5BProject02%5D/yolo_demo.mp4" controls width="640"></video>
+https://github.com/user-attachments/assets/0d8b63f9-3ecc-4996-908b-8c69a6e2916a
 
 [MP4 영상 열기](yolo_demo.mp4)
 
